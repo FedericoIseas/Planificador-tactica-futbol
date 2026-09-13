@@ -1,31 +1,86 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar.jsx';
 import PrintableBoard from './components/PrintableBoard.jsx';
-import { loadData, saveData, DEFAULT_SQUAD, createMatch } from './storage.js';
+import { DEFAULT_SQUAD, createMatch, loadData, saveData } from './storage.js';
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
-const fmtMatchDate = (d) => d ? ` · ${d.split('-').slice(1).reverse().join('/')}` : '';
+const PRINT_SECTIONS = [
+  { key: 'ataque',  label: 'Ataque',       icon: '⚔️' },
+  { key: 'defensa', label: 'Defensa',       icon: '🛡️' },
+  { key: 'extra',   label: 'Pelota Parada', icon: '🎯' },
+];
 
-// ── initial state ───────────────────────────────────────────────────────────
-const initState = () => {
+function PrintSectionsModal({ onConfirm, onCancel }) {
+  const [selected, setSelected] = useState({ ataque: true, defensa: true, extra: true });
+
+  const toggle = (key) => setSelected(prev => ({ ...prev, [key]: !prev[key] }));
+  const anySelected = Object.values(selected).some(Boolean);
+
+  return (
+    <div className="print-modal-overlay" onClick={onCancel}>
+      <div className="print-modal" onClick={e => e.stopPropagation()}>
+        <div className="print-modal-header">
+          <span className="print-modal-icon">🖨️</span>
+          <div>
+            <div className="print-modal-title">Seleccionar secciones a imprimir</div>
+            <div className="print-modal-subtitle">Elegí qué páginas incluir en el PDF / impresión</div>
+          </div>
+        </div>
+
+        <div className="print-modal-options">
+          {PRINT_SECTIONS.map(s => (
+            <label key={s.key} className={`print-modal-option${selected[s.key] ? ' checked' : ''}`}>
+              <input
+                type="checkbox"
+                checked={selected[s.key]}
+                onChange={() => toggle(s.key)}
+              />
+              <span className="print-modal-option-icon">{s.icon}</span>
+              <span className="print-modal-option-label">{s.label}</span>
+              {selected[s.key] && <span className="print-modal-check">✓</span>}
+            </label>
+          ))}
+        </div>
+
+        <div className="print-modal-actions">
+          <button className="btn btn-ghost" onClick={onCancel}>Cancelar</button>
+          <button
+            className="btn btn-print"
+            disabled={!anySelected}
+            onClick={() => onConfirm(selected)}
+          >
+            🖨️ Imprimir
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function getInitialState() {
   const saved = loadData();
-  if (saved) return saved;
-  const defaultMatch = createMatch('Fecha 1');
+  if (saved && Array.isArray(saved.matches) && saved.matches.length > 0) {
+    return {
+      squad: saved.squad || DEFAULT_SQUAD,
+      matches: saved.matches,
+      activeMatchId: saved.activeMatchId || saved.matches[0].id,
+    };
+  }
+  const firstMatch = createMatch('Fecha 1');
   return {
     squad: DEFAULT_SQUAD,
-    matches: [defaultMatch],
-    activeMatchId: defaultMatch.id,
+    matches: [firstMatch],
+    activeMatchId: firstMatch.id,
   };
-};
+}
 
 export default function App() {
-  const [state, setState] = useState(initState);
-  const [showNewMatchModal, setShowNewMatchModal] = useState(false);
-  const [newMatchLabel, setNewMatchLabel] = useState('');
+  const [state, setState] = useState(getInitialState);
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printSections, setPrintSections] = useState({ ataque: true, defensa: true, extra: true });
   const importRef = useRef(null);
 
-  // ── Export all data as JSON file ────────────────────────────────────────
-  const handleExport = useCallback(() => {
+  // Export all data as JSON file
+  const handleExport = () => {
     const json = JSON.stringify(state, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -34,11 +89,11 @@ export default function App() {
     a.download = `planificador_tactico_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [state]);
+  };
 
-  // ── Import from JSON file ───────────────────────────────────────────────
-  const handleImport = useCallback((e) => {
-    const file = e.target.files[0];
+  // Import all data from JSON file
+  const handleImport = (e) => {
+    const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
@@ -57,178 +112,184 @@ export default function App() {
     };
     reader.readAsText(file);
     e.target.value = '';
-  }, []);
+  };
 
-  // Persist to localStorage on every change
   useEffect(() => {
     saveData(state);
   }, [state]);
 
-  const activeMatch = useMemo(
-    () => state.matches.find(m => m.id === state.activeMatchId) || state.matches[0],
-    [state.matches, state.activeMatchId]
-  );
+  const activeMatch = state.matches.find(m => m.id === state.activeMatchId) || state.matches[0];
 
-  // Set of player IDs on ANY tactic in the active match
-  const fieldPlayerIds = useMemo(() => {
-    if (!activeMatch) return new Set();
-    return new Set(
-      Object.values(activeMatch.tactics).flatMap(t => (t.players || []).map(p => p.id))
-    );
-  }, [activeMatch]);
+  const handleSelectMatch = (id) => {
+    setState(prev => ({ ...prev, activeMatchId: id }));
+  };
 
-  // ── Squad operations ────────────────────────────────────────────────────
-  const handleAddPlayer = useCallback((name, number) => {
-    const newPlayer = { id: `p_${Date.now()}`, name, number };
-    setState(s => ({ ...s, squad: [...s.squad, newPlayer] }));
-  }, []);
-
-  const handleRemovePlayer = useCallback((playerId) => {
-    setState(s => ({
-      ...s,
-      squad: s.squad.filter(p => p.id !== playerId),
-      matches: s.matches.map(m => ({
-        ...m,
-        tactics: Object.fromEntries(
-          Object.entries(m.tactics).map(([key, tac]) => [
-            key, { ...tac, players: (tac.players || []).filter(p => p.id !== playerId) }
-          ])
-        ),
-      })),
-    }));
-  }, []);
-
-  // ── Match operations ────────────────────────────────────────────────────
-  const handleMatchChange = useCallback((updatedMatch) => {
-    setState(s => ({
-      ...s,
-      matches: s.matches.map(m => m.id === updatedMatch.id ? updatedMatch : m),
-    }));
-  }, []);
-
-  const handleNewMatch = useCallback(() => {
+  const handleNewMatch = () => {
     const nextNum = state.matches.length + 1;
-    const label = `Fecha ${nextNum}`;
-    const m = createMatch(label);
-    setState(s => ({ ...s, matches: [...s.matches, m], activeMatchId: m.id }));
-  }, [state.matches.length]);
+    const newM = createMatch(`Fecha ${nextNum}`);
+    setState(prev => ({
+      ...prev,
+      matches: [...prev.matches, newM],
+      activeMatchId: newM.id,
+    }));
+  };
 
-  const handleDeleteMatch = useCallback((matchId) => {
-    setState(s => {
-      const remaining = s.matches.filter(m => m.id !== matchId);
-      if (remaining.length === 0) return s;
+  const handleDeleteMatch = (id) => {
+    if (state.matches.length <= 1) return;
+    const confirmDel = window.confirm('¿Seguro que querés eliminar esta fecha?');
+    if (!confirmDel) return;
+
+    setState(prev => {
+      const nextMatches = prev.matches.filter(m => m.id !== id);
+      const nextActiveId = prev.activeMatchId === id ? nextMatches[0].id : prev.activeMatchId;
       return {
-        ...s,
-        matches: remaining,
-        activeMatchId: remaining[remaining.length - 1].id,
+        ...prev,
+        matches: nextMatches,
+        activeMatchId: nextActiveId,
       };
     });
-  }, []);
+  };
 
-  // ── Drag & drop from sidebar ────────────────────────────────────────────
-  const handleDrop = useCallback((playerId, x, y, tacticKey) => {
-    setState(s => {
-      const player = s.squad.find(p => p.id === playerId);
-      if (!player) return s;
-      return {
-        ...s,
-        matches: s.matches.map(m => {
-          if (m.id !== s.activeMatchId) return m;
-          const tac = m.tactics[tacticKey] || { players: [] };
-          const alreadyOnThisTactic = tac.players.some(p => p.id === playerId);
-          if (alreadyOnThisTactic) return m;
-          return {
-            ...m,
-            tactics: {
-              ...m.tactics,
-              [tacticKey]: {
-                ...tac,
-                players: [...tac.players, { id: playerId, name: player.name, number: player.number, x, y }],
-              },
-            },
-          };
-        }),
-      };
-    });
-  }, []);
+  const handleUpdateMatch = (updatedMatch) => {
+    setState(prev => ({
+      ...prev,
+      matches: prev.matches.map(m => m.id === updatedMatch.id ? updatedMatch : m),
+    }));
+  };
 
-  // ── Move player already on field ────────────────────────────────────────
-  const handlePlayerMove = useCallback((playerId, x, y, tacticKey) => {
-    setState(s => ({
-      ...s,
-      matches: s.matches.map(m => {
-        if (m.id !== s.activeMatchId) return m;
-        const tac = m.tactics[tacticKey] || { players: [] };
-        return {
-          ...m,
-          tactics: {
-            ...m.tactics,
-            [tacticKey]: {
-              ...tac,
-              players: tac.players.map(p => p.id === playerId ? { ...p, x, y } : p),
-            },
-          },
-        };
+  const handleAddPlayer = (name, number) => {
+    const newP = {
+      id: `p_${Date.now()}`,
+      name,
+      number: number ? parseInt(number, 10) || number : '',
+    };
+    setState(prev => ({
+      ...prev,
+      squad: [...prev.squad, newP],
+    }));
+  };
+
+  const handleRemovePlayerFromSquad = (playerId) => {
+    setState(prev => ({
+      ...prev,
+      squad: prev.squad.filter(p => p.id !== playerId),
+      matches: prev.matches.map(match => {
+        const nextTactics = { ...match.tactics };
+        Object.keys(nextTactics).forEach(key => {
+          if (nextTactics[key]?.players) {
+            nextTactics[key] = {
+              ...nextTactics[key],
+              players: nextTactics[key].players.filter(p => p.id !== playerId),
+            };
+          }
+        });
+        return { ...match, tactics: nextTactics };
       }),
     }));
-  }, []);
+  };
 
-  // ── Remove player from field ────────────────────────────────────────────
-  const handlePlayerRemove = useCallback((playerId, tacticKey) => {
-    setState(s => ({
-      ...s,
-      matches: s.matches.map(m => {
-        if (m.id !== s.activeMatchId) return m;
-        const tac = m.tactics[tacticKey] || { players: [] };
-        return {
-          ...m,
-          tactics: {
-            ...m.tactics,
-            [tacticKey]: {
-              ...tac,
-              players: tac.players.filter(p => p.id !== playerId),
-            },
-          },
-        };
-      }),
-    }));
-  }, []);
+  const handleDropOnPitch = (tacticKey, playerId, x, y) => {
+    const playerObj = state.squad.find(p => p.id === playerId);
+    if (!playerObj || !activeMatch) return;
 
-  if (!activeMatch) return null;
+    const currentPlayers = activeMatch.tactics[tacticKey]?.players || [];
+    if (currentPlayers.some(p => p.id === playerId)) return;
+
+    const newPlacedPlayer = { ...playerObj, x, y };
+    const updatedMatch = {
+      ...activeMatch,
+      tactics: {
+        ...activeMatch.tactics,
+        [tacticKey]: {
+          ...activeMatch.tactics[tacticKey],
+          players: [...currentPlayers, newPlacedPlayer],
+        },
+      },
+    };
+    handleUpdateMatch(updatedMatch);
+  };
+
+  const handlePlayerMove = (tacticKey, playerId, x, y) => {
+    if (!activeMatch) return;
+    const currentPlayers = activeMatch.tactics[tacticKey]?.players || [];
+    const updatedPlayers = currentPlayers.map(p => p.id === playerId ? { ...p, x, y } : p);
+
+    const updatedMatch = {
+      ...activeMatch,
+      tactics: {
+        ...activeMatch.tactics,
+        [tacticKey]: {
+          ...activeMatch.tactics[tacticKey],
+          players: updatedPlayers,
+        },
+      },
+    };
+    handleUpdateMatch(updatedMatch);
+  };
+
+  const handlePlayerRemoveFromPitch = (tacticKey, playerId) => {
+    if (!activeMatch) return;
+    const currentPlayers = activeMatch.tactics[tacticKey]?.players || [];
+    const updatedPlayers = currentPlayers.filter(p => p.id !== playerId);
+
+    const updatedMatch = {
+      ...activeMatch,
+      tactics: {
+        ...activeMatch.tactics,
+        [tacticKey]: {
+          ...activeMatch.tactics[tacticKey],
+          players: updatedPlayers,
+        },
+      },
+    };
+    handleUpdateMatch(updatedMatch);
+  };
+
+  const handlePrint = () => {
+    setShowPrintModal(true);
+  };
+
+  const handlePrintConfirm = (sections) => {
+    setPrintSections(sections);
+    setShowPrintModal(false);
+    // Apply section filter then print
+    setTimeout(() => {
+      window.print();
+    }, 80);
+  };
+
+  const fieldPlayerIds = new Set(
+    activeMatch ? Object.values(activeMatch.tactics).flatMap(t => (t.players || []).map(p => p.id)) : []
+  );
 
   return (
     <div className="app-layout">
-      {/* ── TOOLBAR ── */}
+      {/* Top Header Bar / Toolbar */}
       <header className="toolbar no-print">
         <div className="toolbar-brand">
           <div className="toolbar-brand-badge">⚽</div>
-          <span>Planificador Táctico</span>
+          <span>PLANIFICADOR TÁCTICO</span>
         </div>
 
         <div className="toolbar-divider" />
 
-        <span className="toolbar-label">Fechas:</span>
+        <span className="toolbar-label">FECHAS:</span>
+
         <div className="toolbar-matches">
           {state.matches.map(m => (
-            <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <button
-                className={`btn btn-match${m.id === state.activeMatchId ? ' active' : ''}`}
-                onClick={() => setState(s => ({ ...s, activeMatchId: m.id }))}
-              >
-                {m.label || 'Partido'}
-                {m.rival ? ` (vs ${m.rival.split(' ')[0]})` : ''}
-                {fmtMatchDate(m.date)}
-              </button>
-              {state.matches.length > 1 && (
-                <button
-                  className="btn btn-danger btn-close"
-                  onClick={() => handleDeleteMatch(m.id)}
-                  title="Eliminar fecha"
-                >×</button>
-              )}
-            </div>
+            <button
+              key={m.id}
+              className={`btn btn-match${m.id === state.activeMatchId ? ' active' : ''}`}
+              onClick={() => handleSelectMatch(m.id)}
+            >
+              {m.label || 'Fecha'}{m.rival ? ` (${m.rival})` : ''}
+            </button>
           ))}
-          <button className="btn btn-ghost" onClick={handleNewMatch}>
+          <button
+            className="btn btn-ghost"
+            onClick={handleNewMatch}
+            title="Agregar nueva fecha"
+          >
             + Nueva Fecha
           </button>
         </div>
@@ -236,66 +297,61 @@ export default function App() {
         <div className="toolbar-spacer" />
 
         <button className="btn btn-ghost" onClick={handleExport} title="Exportar backup JSON">
-          ⬇ Exportar
+          <span>⬇</span>
+          <span>Exportar</span>
         </button>
         <button className="btn btn-ghost" onClick={() => importRef.current?.click()} title="Cargar backup JSON">
-          ⬆ Importar
+          <span>⬆</span>
+          <span>Importar</span>
         </button>
-        <input ref={importRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
+        <input
+          ref={importRef}
+          type="file"
+          accept=".json"
+          style={{ display: 'none' }}
+          onChange={handleImport}
+        />
 
         <div className="toolbar-divider" />
 
-        <button className="btn btn-print" onClick={() => window.print()}>
-          🖨 Imprimir A4
+        <button className="btn btn-print" onClick={handlePrint} title="Imprimir o guardar PDF">
+          <span>🖨️</span>
+          <span>Imprimir</span>
         </button>
       </header>
 
-      {/* ── BODY ── */}
+      {/* Main Content Area */}
       <div className="app-body">
         <Sidebar
           squad={state.squad}
           fieldPlayerIds={fieldPlayerIds}
           onAddPlayer={handleAddPlayer}
-          onRemovePlayer={handleRemovePlayer}
+          onRemovePlayer={handleRemovePlayerFromSquad}
         />
-        <main className="main-content">
-          <PrintableBoard
-            match={activeMatch}
-            squad={state.squad}
-            onMatchChange={handleMatchChange}
-            onDrop={handleDrop}
-            onPlayerMove={handlePlayerMove}
-            onPlayerRemove={handlePlayerRemove}
-          />
-        </main>
+
+        {activeMatch && (
+          <main className="main-content">
+            <PrintableBoard
+              match={activeMatch}
+              squad={state.squad}
+              onMatchChange={handleUpdateMatch}
+              onDrop={handleDropOnPitch}
+              onPlayerMove={handlePlayerMove}
+              onPlayerRemove={handlePlayerRemoveFromPitch}
+              onDeleteMatch={() => handleDeleteMatch(activeMatch.id)}
+              canDeleteMatch={state.matches.length > 1}
+              printSections={printSections}
+            />
+          </main>
+        )}
       </div>
 
-      {/* ── MODAL: Nuevo Partido ── */}
-      {showNewMatchModal && (
-        <div className="modal-overlay" onClick={() => setShowNewMatchModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-title">
-              <span>⚽</span> Crear Nueva Fecha / Partido
-            </div>
-            <div className="modal-row">
-              <span className="modal-label">Etiqueta</span>
-              <input
-                type="text"
-                className="match-header-input"
-                placeholder="ej: Fecha 2 — vs Deportivo"
-                value={newMatchLabel}
-                onChange={e => setNewMatchLabel(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleNewMatch()}
-                style={{ flex: 1 }}
-                autoFocus
-              />
-            </div>
-            <div className="modal-actions">
-              <button className="btn btn-ghost" onClick={() => setShowNewMatchModal(false)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={handleNewMatch}>Crear Fecha</button>
-            </div>
-          </div>
-        </div>
+      {/* Print Section Selection Modal */}
+      {showPrintModal && (
+        <PrintSectionsModal
+          onConfirm={handlePrintConfirm}
+          onCancel={() => setShowPrintModal(false)}
+        />
       )}
     </div>
   );

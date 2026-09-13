@@ -25,7 +25,7 @@ function fmtDate(d) {
 }
 
 /** Header bar present at the top of every printed page & screen canvas */
-function MatchHeader({ match, onMatchChange, tacticLabel }) {
+function MatchHeader({ match, onMatchChange, tacticLabel, onDeleteMatch, canDeleteMatch }) {
   const handleChange = (field, value) => onMatchChange({ ...match, [field]: value });
 
   return (
@@ -58,52 +58,64 @@ function MatchHeader({ match, onMatchChange, tacticLabel }) {
             </span>
           )}
           {fmtDate(match.date) && (
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: '#64748b', letterSpacing: '0.04em' }}>
               • {fmtDate(match.date)}
             </span>
           )}
         </div>
       </div>
 
-      {/* Right Column: Key Match Details */}
-      <div className="match-header-fields">
-        <div className="match-header-field">
-          <span className="match-header-label">📅 Fecha</span>
-          <input
-            className="match-header-input"
-            type="date"
-            value={match.date}
-            onChange={e => handleChange('date', e.target.value)}
-          />
+      {/* Right Column: Key Match Details & Delete Action */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+        <div className="match-header-fields">
+          <div className="match-header-field">
+            <span className="match-header-label">📅 Fecha</span>
+            <input
+              className="match-header-input"
+              type="date"
+              value={match.date}
+              onChange={e => handleChange('date', e.target.value)}
+            />
+          </div>
+          <div className="match-header-field">
+            <span className="match-header-label">⏰ Citación</span>
+            <input
+              className="match-header-input"
+              type="time"
+              value={match.time}
+              onChange={e => handleChange('time', e.target.value)}
+            />
+          </div>
+          <div className="match-header-field">
+            <span className="match-header-label">📍 Lugar</span>
+            <input
+              className="match-header-input"
+              type="text"
+              placeholder="Cancha / Estadio…"
+              value={match.venue}
+              onChange={e => handleChange('venue', e.target.value)}
+            />
+          </div>
         </div>
-        <div className="match-header-field">
-          <span className="match-header-label">⏰ Citación</span>
-          <input
-            className="match-header-input"
-            type="time"
-            value={match.time}
-            onChange={e => handleChange('time', e.target.value)}
-          />
-        </div>
-        <div className="match-header-field">
-          <span className="match-header-label">📍 Lugar</span>
-          <input
-            className="match-header-input"
-            type="text"
-            placeholder="Cancha / Estadio…"
-            value={match.venue}
-            onChange={e => handleChange('venue', e.target.value)}
-          />
-        </div>
+
+        {canDeleteMatch && onDeleteMatch && (
+          <button
+            className="btn-delete-match no-print"
+            onClick={() => onDeleteMatch(match.id)}
+            title="Eliminar esta fecha"
+          >
+            🗑️ Eliminar esta fecha
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
 /** Single printable sheet component */
-function PrintPage({ match, squad, tacticKey, tacticLabel, isExtra, onMatchChange, onDrop, onPlayerMove, onPlayerRemove, isLast }) {
+function PrintPage({ match, squad, tacticKey, tacticLabel, isExtra, onMatchChange, onDrop, onPlayerMove, onPlayerRemove, onDeleteMatch, canDeleteMatch, isLast }) {
   const [activeSetpieces, setActiveSetpieces] = useState('tirosLibres');
-  
+
   const allFieldIds = new Set(
     Object.values(match.tactics).flatMap(t => (t.players || []).map(p => p.id))
   );
@@ -122,7 +134,13 @@ function PrintPage({ match, squad, tacticKey, tacticLabel, isExtra, onMatchChang
   return (
     <div className={`printable-board print-page${isLast ? ' last-page' : ''}`}>
       {/* Header (Repeated per page) */}
-      <MatchHeader match={match} onMatchChange={onMatchChange} tacticLabel={tacticLabel} />
+      <MatchHeader
+        match={match}
+        onMatchChange={onMatchChange}
+        tacticLabel={tacticLabel}
+        onDeleteMatch={onDeleteMatch}
+        canDeleteMatch={canDeleteMatch}
+      />
 
       {/* Sheet Body */}
       <div className="tactic-body">
@@ -140,7 +158,7 @@ function PrintPage({ match, squad, tacticKey, tacticLabel, isExtra, onMatchChang
         <div className="onboard-squad no-print">
           <div className="onboard-squad-title">
             <span>Plantel Disponible</span>
-            <span style={{ fontSize: 9, color: '#3b82f6' }}>{availableSquad.length}</span>
+            <span style={{ fontSize: 10.5, background: '#326295', color: '#ffffff', padding: '1px 7px', borderRadius: 10, fontWeight: 800 }}>{availableSquad.length}</span>
           </div>
           {availableSquad.map(p => (
             <div key={p.id} className="onboard-squad-item">
@@ -149,67 +167,65 @@ function PrintPage({ match, squad, tacticKey, tacticLabel, isExtra, onMatchChang
             </div>
           ))}
           {availableSquad.length === 0 && (
-            <div style={{ color: '#94a3b8', fontSize: 8.5, fontStyle: 'italic', paddingTop: 6, textAlign: 'center' }}>
+            <div style={{ color: '#94a3b8', fontSize: 11, fontStyle: 'italic', paddingTop: 6, textAlign: 'center' }}>
               Todos ubicados en cancha
             </div>
           )}
         </div>
 
-        {/* Set Pieces & Observations Section (Only on 'extra' tactic page) */}
-        {isExtra && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3mm' }}>
-            {/* SET PIECES */}
-            <div className="setpieces-block">
-              <div className="setpieces-header">
-                <div className="setpieces-title">Pelota Parada</div>
-                <div className="setpieces-tabs no-print">
-                  {SETPIECES_TABS.map(t => (
-                    <div
-                      key={t.key}
-                      className={`setpieces-tab${activeSetpieces === t.key ? ' active' : ''}`}
-                      onClick={() => setActiveSetpieces(t.key)}
-                    >
-                      {t.label}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Screen: Tabbed view */}
-              <div className="no-print">
-                <SetpiecesCategory
-                  label={SETPIECES_TABS.find(t => t.key === activeSetpieces)?.label}
-                  data={match.setpieces[activeSetpieces]}
-                  onChange={(f, v) => handleSetpieceChange(activeSetpieces, f, v)}
-                />
-              </div>
-
-              {/* Print: Both categories side-by-side */}
-              <div className="print-only" style={{ display: 'none', flexDirection: 'row', gap: '3mm' }}>
+        {/* Set Pieces & Observations Section (Rendered on ALL tactic pages: Ataque, Defensa & Pelota Parada) */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3mm', minWidth: 0 }}>
+          {/* SET PIECES */}
+          <div className="setpieces-block">
+            <div className="setpieces-header">
+              <div className="setpieces-title">Pelota Parada</div>
+              <div className="setpieces-tabs no-print">
                 {SETPIECES_TABS.map(t => (
-                  <div key={t.key} style={{ flex: 1 }}>
-                    <SetpiecesCategory
-                      label={t.label}
-                      data={match.setpieces[t.key]}
-                      onChange={(f, v) => handleSetpieceChange(t.key, f, v)}
-                    />
+                  <div
+                    key={t.key}
+                    className={`setpieces-tab${activeSetpieces === t.key ? ' active' : ''}`}
+                    onClick={() => setActiveSetpieces(t.key)}
+                  >
+                    {t.label}
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* OBSERVATIONS */}
-            <div className="observations-block">
-              <div className="observations-title">Observaciones / Indicaciones</div>
-              <textarea
-                className="observations-content"
-                value={match.observations || ''}
-                onChange={e => onMatchChange({ ...match, observations: e.target.value })}
-                placeholder="Escribí notas tácticas, marcas específicas, cambios programados…"
+            {/* Screen: Tabbed view */}
+            <div className="no-print">
+              <SetpiecesCategory
+                label={SETPIECES_TABS.find(t => t.key === activeSetpieces)?.label}
+                data={match.setpieces[activeSetpieces]}
+                onChange={(f, v) => handleSetpieceChange(activeSetpieces, f, v)}
               />
             </div>
+
+            {/* Print: Both categories side-by-side */}
+            <div className="setpieces-print-row print-only">
+              {SETPIECES_TABS.map(t => (
+                <div key={t.key} style={{ flex: 1 }}>
+                  <SetpiecesCategory
+                    label={t.label}
+                    data={match.setpieces[t.key]}
+                    onChange={(f, v) => handleSetpieceChange(t.key, f, v)}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
-        )}
+
+          {/* OBSERVATIONS */}
+          <div className="observations-block">
+            <div className="observations-title">Observaciones / Indicaciones</div>
+            <textarea
+              className="observations-content"
+              value={match.observations || ''}
+              onChange={e => onMatchChange({ ...match, observations: e.target.value })}
+              placeholder="Escribí notas tácticas, marcas específicas, cambios programados…"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -220,10 +236,10 @@ function SetpiecesCategory({ label, data, onChange }) {
     <div>
       {label && (
         <div style={{
-          fontSize: 8,
+          fontSize: 11,
           fontWeight: 800,
           textTransform: 'uppercase',
-          letterSpacing: '0.1em',
+          letterSpacing: '0.08em',
           color: '#64748b',
           marginBottom: '1.5mm'
         }}>
@@ -248,9 +264,12 @@ function SetpiecesCategory({ label, data, onChange }) {
   );
 }
 
-export default function PrintableBoard({ match, squad, onMatchChange, onDrop, onPlayerMove, onPlayerRemove }) {
+export default function PrintableBoard({ match, squad, onMatchChange, onDrop, onPlayerMove, onPlayerRemove, onDeleteMatch, canDeleteMatch, printSections }) {
   const [activeTactic, setActiveTactic] = useState('ataque');
   const activeTab = TACTIC_TABS.find(t => t.key === activeTactic);
+  // Filter for print — default to all if not provided
+  const sectionsToprint = printSections || { ataque: true, defensa: true, extra: true };
+  const printTabs = TACTIC_TABS.filter(t => sectionsToprint[t.key]);
 
   return (
     <>
@@ -282,13 +301,15 @@ export default function PrintableBoard({ match, squad, onMatchChange, onDrop, on
           onDrop={onDrop}
           onPlayerMove={onPlayerMove}
           onPlayerRemove={onPlayerRemove}
+          onDeleteMatch={onDeleteMatch}
+          canDeleteMatch={canDeleteMatch}
           isLast={false}
         />
       </div>
 
-      {/* ── PRINT VIEW: All 3 tactic pages sequence ── */}
+      {/* ── PRINT VIEW: Filtered tactic pages ── */}
       <div className="print-pages-container" style={{ display: 'none' }}>
-        {TACTIC_TABS.map((t, i) => (
+        {printTabs.map((t, i) => (
           <PrintPage
             key={t.key}
             match={match}
@@ -300,7 +321,9 @@ export default function PrintableBoard({ match, squad, onMatchChange, onDrop, on
             onDrop={onDrop}
             onPlayerMove={onPlayerMove}
             onPlayerRemove={onPlayerRemove}
-            isLast={i === TACTIC_TABS.length - 1}
+            onDeleteMatch={onDeleteMatch}
+            canDeleteMatch={canDeleteMatch}
+            isLast={i === printTabs.length - 1}
           />
         ))}
       </div>
