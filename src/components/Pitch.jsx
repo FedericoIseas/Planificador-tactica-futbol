@@ -219,9 +219,9 @@ export default function Pitch({
         <rect className="pitch-line" x="72" y="6" width="56" height="18" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
         <rect className="pitch-line" x="84" y="2" width="32" height="6" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" />
         <circle className="pitch-dot" cx="100" cy="38" r="1.5" fill="rgba(255,255,255,0.85)" />
-        <path className="pitch-line" d="M 72 50 A 28 28 0 0 1 128 50" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
-        <path className="pitch-line" d="M 6 16 A 10 10 0 0 1 16 6" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
-        <path className="pitch-line" d="M 184 6 A 10 10 0 0 1 194 16" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+        <path className="pitch-line" d="M 82 50 A 22 22 0 0 0 118 50" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+        <path className="pitch-line" d="M 6 16 A 10 10 0 0 0 16 6" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+        <path className="pitch-line" d="M 184 6 A 10 10 0 0 0 194 16" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
 
         {/* Bottom half — rendered only when full pitch */}
         {!half && (
@@ -230,9 +230,9 @@ export default function Pitch({
             <rect className="pitch-line" x="72" y="256" width="56" height="18" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
             <rect className="pitch-line" x="84" y="272" width="32" height="6" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" />
             <circle className="pitch-dot" cx="100" cy="242" r="1.5" fill="rgba(255,255,255,0.85)" />
-            <path className="pitch-line" d="M 72 230 A 28 28 0 0 0 128 230" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
-            <path className="pitch-line" d="M 6 264 A 10 10 0 0 0 16 274" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
-            <path className="pitch-line" d="M 184 274 A 10 10 0 0 0 194 264" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+            <path className="pitch-line" d="M 82 230 A 22 22 0 0 1 118 230" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+            <path className="pitch-line" d="M 6 264 A 10 10 0 0 1 16 274" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+            <path className="pitch-line" d="M 184 274 A 10 10 0 0 1 194 264" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
           </>
         )}
       </svg>
