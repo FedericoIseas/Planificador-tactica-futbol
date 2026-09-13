@@ -184,43 +184,55 @@ export default function App() {
       matches: prev.matches.map(match => {
         const nextTactics = { ...match.tactics };
         Object.keys(nextTactics).forEach(key => {
-          if (nextTactics[key]?.players) {
-            nextTactics[key] = {
-              ...nextTactics[key],
-              players: nextTactics[key].players.filter(p => p.id !== playerId),
-            };
-          }
+          ['players', 'players_izq', 'players_der'].forEach(subKey => {
+            if (nextTactics[key]?.[subKey]) {
+              nextTactics[key] = {
+                ...nextTactics[key],
+                [subKey]: nextTactics[key][subKey].filter(p => p.id !== playerId),
+              };
+            }
+          });
         });
         return { ...match, tactics: nextTactics };
       }),
     }));
   };
 
-  const handleDropOnPitch = (playerId, x, y, tacticKey) => {
+  const handleDropOnPitch = (playerId, x, y, tacticKey, subKey = 'players') => {
     const playerObj = state.squad.find(p => p.id === playerId);
     if (!playerObj || !activeMatch) return;
 
-    const currentPlayers = activeMatch.tactics[tacticKey]?.players || [];
+    const currentPlayers = activeMatch.tactics[tacticKey]?.[subKey] || [];
     if (currentPlayers.some(p => p.id === playerId)) return;
 
     const newPlacedPlayer = { ...playerObj, x, y };
-    const updatedMatch = {
-      ...activeMatch,
-      tactics: {
-        ...activeMatch.tactics,
-        [tacticKey]: {
-          ...activeMatch.tactics[tacticKey],
-          players: [...currentPlayers, newPlacedPlayer],
-        },
-      },
+    
+    let updatedTactics = { ...activeMatch.tactics };
+    
+    if (tacticKey === 'ataque' || tacticKey === 'defensa') {
+      const otherKey = tacticKey === 'ataque' ? 'defensa' : 'ataque';
+      const otherPlayers = updatedTactics[otherKey]?.[subKey] || [];
+      if (!otherPlayers.some(p => p.id === playerId)) {
+        updatedTactics[otherKey] = {
+          ...updatedTactics[otherKey],
+          [subKey]: [...otherPlayers, newPlacedPlayer],
+        };
+      }
+    }
+
+    updatedTactics[tacticKey] = {
+      ...updatedTactics[tacticKey],
+      [subKey]: [...currentPlayers, newPlacedPlayer],
     };
+
+    const updatedMatch = { ...activeMatch, tactics: updatedTactics };
     handleUpdateMatch(updatedMatch);
     setSelectedPlayerId(null);
   };
 
-  const handlePlayerMove = (playerId, x, y, tacticKey) => {
+  const handlePlayerMove = (playerId, x, y, tacticKey, subKey = 'players') => {
     if (!activeMatch) return;
-    const currentPlayers = activeMatch.tactics[tacticKey]?.players || [];
+    const currentPlayers = activeMatch.tactics[tacticKey]?.[subKey] || [];
     const updatedPlayers = currentPlayers.map(p => p.id === playerId ? { ...p, x, y } : p);
 
     const updatedMatch = {
@@ -229,28 +241,38 @@ export default function App() {
         ...activeMatch.tactics,
         [tacticKey]: {
           ...activeMatch.tactics[tacticKey],
-          players: updatedPlayers,
+          [subKey]: updatedPlayers,
         },
       },
     };
     handleUpdateMatch(updatedMatch);
   };
 
-  const handlePlayerRemoveFromPitch = (playerId, tacticKey) => {
+  const handlePlayerRemoveFromPitch = (playerId, tacticKey, subKey = 'players') => {
     if (!activeMatch) return;
-    const currentPlayers = activeMatch.tactics[tacticKey]?.players || [];
-    const updatedPlayers = currentPlayers.filter(p => p.id !== playerId);
+    
+    let updatedTactics = { ...activeMatch.tactics };
 
-    const updatedMatch = {
-      ...activeMatch,
-      tactics: {
-        ...activeMatch.tactics,
-        [tacticKey]: {
-          ...activeMatch.tactics[tacticKey],
-          players: updatedPlayers,
-        },
-      },
-    };
+    if (tacticKey === 'ataque' || tacticKey === 'defensa') {
+      Object.keys(updatedTactics).forEach(key => {
+        ['players', 'players_izq', 'players_der'].forEach(sKey => {
+          if (updatedTactics[key]?.[sKey]) {
+            updatedTactics[key] = {
+              ...updatedTactics[key],
+              [sKey]: updatedTactics[key][sKey].filter(p => p.id !== playerId),
+            };
+          }
+        });
+      });
+    } else {
+      const currentPlayers = updatedTactics[tacticKey]?.[subKey] || [];
+      updatedTactics[tacticKey] = {
+        ...updatedTactics[tacticKey],
+        [subKey]: currentPlayers.filter(p => p.id !== playerId),
+      };
+    }
+
+    const updatedMatch = { ...activeMatch, tactics: updatedTactics };
     handleUpdateMatch(updatedMatch);
   };
 
@@ -270,6 +292,10 @@ export default function App() {
   const fieldPlayerIds = new Set(
     (activeMatch?.tactics?.[activeTactic]?.players || []).map(p => p.id)
   );
+
+  const displaySquad = activeTactic === 'ataque' || activeTactic === 'defensa'
+    ? state.squad
+    : state.squad.filter(p => activeMatch?.tactics?.['ataque']?.players?.some(ap => ap.id === p.id));
 
   return (
     <div className="app-layout">
@@ -386,7 +412,7 @@ export default function App() {
         )}
 
         <Sidebar
-          squad={state.squad}
+          squad={displaySquad}
           fieldPlayerIds={fieldPlayerIds}
           onAddPlayer={handleAddPlayer}
           onRemovePlayer={handleRemovePlayerFromSquad}
@@ -400,7 +426,7 @@ export default function App() {
           <main className="main-content">
             <PrintableBoard
               match={activeMatch}
-              squad={state.squad}
+              squad={displaySquad}
               activeTactic={activeTactic}
               onTacticChange={setActiveTactic}
               onMatchChange={handleUpdateMatch}

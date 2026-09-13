@@ -10,6 +10,7 @@ export default function Pitch({
   onPlayerMove,
   onPlayerRemove,
   tacticKey,
+  subKey = 'players',
   half = false,
   selectedPlayerId = null,
   onClearSelectedPlayer = null,
@@ -42,9 +43,9 @@ export default function Pitch({
     const clampedX = Math.max(3, Math.min(97, xPct));
     const clampedY = Math.max(3, Math.min(97, yPct));
 
-    onDrop(playerId, clampedX, clampedY, tacticKey);
+    onDrop(playerId, clampedX, clampedY, tacticKey, subKey);
     if (onClearSelectedPlayer) onClearSelectedPlayer();
-  }, [onDrop, tacticKey, onClearSelectedPlayer]);
+  }, [onDrop, tacticKey, subKey, onClearSelectedPlayer]);
 
   // ── Tap-to-Place (Mobile & Desktop quick placement) ───────
   const handlePitchClick = useCallback((e) => {
@@ -58,9 +59,9 @@ export default function Pitch({
     const clampedX = Math.max(3, Math.min(97, xPct));
     const clampedY = Math.max(3, Math.min(97, yPct));
 
-    onDrop(selectedPlayerId, clampedX, clampedY, tacticKey);
+    onDrop(selectedPlayerId, clampedX, clampedY, tacticKey, subKey);
     if (onClearSelectedPlayer) onClearSelectedPlayer();
-  }, [selectedPlayerId, onDrop, tacticKey, onClearSelectedPlayer]);
+  }, [selectedPlayerId, onDrop, tacticKey, subKey, onClearSelectedPlayer]);
 
   // ── Move already-placed players (Mouse) ───────────────────
   const handlePlayerMouseDown = useCallback((e, player) => {
@@ -109,7 +110,7 @@ export default function Pitch({
       const yPct = ((e.clientY - rect.top - movingPlayer.offsetY) / rect.height) * 100;
       const cx = Math.max(3, Math.min(97, xPct));
       const cy = Math.max(3, Math.min(97, yPct));
-      onPlayerMove(movingPlayer.id, cx, cy, tacticKey);
+      onPlayerMove(movingPlayer.id, cx, cy, tacticKey, subKey);
       setMovingPlayer(null);
       setGhostPos(null);
     };
@@ -139,7 +140,7 @@ export default function Pitch({
         const yPct = ((touch.clientY - rect.top - movingPlayer.offsetY) / rect.height) * 100;
         const cx = Math.max(3, Math.min(97, xPct));
         const cy = Math.max(3, Math.min(97, yPct));
-        onPlayerMove(movingPlayer.id, cx, cy, tacticKey);
+        onPlayerMove(movingPlayer.id, cx, cy, tacticKey, subKey);
       }
       setMovingPlayer(null);
       setGhostPos(null);
@@ -158,10 +159,10 @@ export default function Pitch({
       window.removeEventListener('touchend', handleWindowTouchEnd);
       window.removeEventListener('touchcancel', handleWindowTouchEnd);
     };
-  }, [movingPlayer, onPlayerMove, tacticKey]);
+  }, [movingPlayer, onPlayerMove, tacticKey, subKey]);
 
-  // ViewBox: Full pitch is 200x280. Half pitch (attacking half) is 200x142.
-  const svgViewBox = half ? '0 0 200 142' : '0 0 200 280';
+  // ViewBox: Full pitch is 200x280. Half pitch (attacking half) is 200x146.
+  const svgViewBox = half ? '0 0 200 146' : '0 0 200 280';
 
   return (
     <div
@@ -184,12 +185,12 @@ export default function Pitch({
         <rect className="pitch-bg" width="200" height="280" fill="#12502f" />
 
         {/* Alternating grass stripes */}
-        {Array.from({ length: 7 }).map((_, i) => (
+        {Array.from({ length: 14 }).map((_, i) => (
           <rect
             key={i}
             className="pitch-bg"
             x="0"
-            y={i * 40}
+            y={i * 20}
             width="200"
             height="20"
             fill={i % 2 === 0 ? '#155e37' : '#12502f'}
@@ -269,8 +270,8 @@ export default function Pitch({
             </div>
             <button
               className="field-player-remove no-print"
-              onClick={(e) => { e.stopPropagation(); onPlayerRemove(player.id, tacticKey); }}
-              onTouchEnd={(e) => { e.stopPropagation(); onPlayerRemove(player.id, tacticKey); }}
+              onClick={(e) => { e.stopPropagation(); onPlayerRemove(player.id, tacticKey, subKey); }}
+              onTouchEnd={(e) => { e.stopPropagation(); onPlayerRemove(player.id, tacticKey, subKey); }}
               title="Quitar de la cancha"
             >×</button>
           </div>

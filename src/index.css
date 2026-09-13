@@ -599,11 +599,12 @@ html, body, #root {
 /* ── Board Scroll Area (Tight & Maximized) ──────────────── */
 .board-scroll {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 6px 10px 10px;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
 }
 
 /* ════════════════════════════════════════════════════════
@@ -614,7 +615,8 @@ html, body, #root {
   color: #020f2a;
   width: 100%;
   max-width: 1350px;
-  max-height: calc(100vh - 90px);
+  min-height: calc(100vh - 90px);
+  height: auto;
   padding: 3mm 5mm;
   box-shadow: var(--shadow-card);
   display: flex;
@@ -1678,8 +1680,8 @@ html, body, #root {
   }
 
   .pitch-wrapper.pitch-half {
-    width: 130mm !important;
-    height: 92mm !important;
+    width: 120mm !important;
+    height: 82mm !important;
   }
 
   .pitch-svg {

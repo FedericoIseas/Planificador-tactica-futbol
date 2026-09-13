@@ -110,30 +110,28 @@ function MatchHeader({ match, onMatchChange, tacticLabel, onDeleteMatch, canDele
   );
 }
 
-/** Single printable sheet component */
-function PrintPage({
+function TacticBody({
   match,
   squad,
   tacticKey,
+  subKey = 'players',
   tacticLabel,
   isExtra,
   onMatchChange,
   onDrop,
   onPlayerMove,
   onPlayerRemove,
-  onDeleteMatch,
-  canDeleteMatch,
-  isLast,
-  selectedPlayerId = null,
-  onSelectPlayerForPlacement = null,
-  onClearSelectedPlayer = null,
+  selectedPlayerId,
+  onSelectPlayerForPlacement,
+  onClearSelectedPlayer
 }) {
-
-
   const currentFieldIds = new Set(
-    (match.tactics[tacticKey]?.players || []).map(p => p.id)
+    (match.tactics[tacticKey]?.[subKey] || []).map(p => p.id)
   );
   const availableSquad = squad.filter(p => !currentFieldIds.has(p.id));
+
+  const setpieceDataKey = subKey !== 'players' ? `${tacticKey}_${subKey.replace('players_', '')}` : tacticKey;
+  const obsKey = subKey !== 'players' ? `${subKey}_obs` : 'observations';
 
   const handleSetpieceChange = (category, field, value) => {
     onMatchChange({
@@ -155,105 +153,148 @@ function PrintPage({
   };
 
   return (
-    <div className={`printable-board print-page${isLast ? ' last-page' : ''}`}>
-      {/* Header (Repeated per page) */}
-      <MatchHeader
-        match={match}
-        onMatchChange={onMatchChange}
-        tacticLabel={tacticLabel}
-        onDeleteMatch={onDeleteMatch}
-        canDeleteMatch={canDeleteMatch}
+    <div className="tactic-body">
+      <Pitch
+        tacticKey={tacticKey}
+        players={match.tactics[tacticKey]?.[subKey] || []}
+        onDrop={onDrop}
+        onPlayerMove={onPlayerMove}
+        onPlayerRemove={onPlayerRemove}
+        subKey={subKey}
+        half={isExtra}
+        selectedPlayerId={selectedPlayerId}
+        onClearSelectedPlayer={onClearSelectedPlayer}
       />
 
-      {/* Sheet Body */}
-      <div className="tactic-body">
-        {/* Interactive / Printable Pitch */}
-        <Pitch
-          tacticKey={tacticKey}
-          players={match.tactics[tacticKey]?.players || []}
-          onDrop={onDrop}
-          onPlayerMove={onPlayerMove}
-          onPlayerRemove={onPlayerRemove}
-          half={isExtra}
-          selectedPlayerId={selectedPlayerId}
-          onClearSelectedPlayer={onClearSelectedPlayer}
-        />
-
-        {/* Available Squad List (Screen view only) */}
-        <div className="onboard-squad no-print">
-          <div className="onboard-squad-title">
-            <span>Plantel Disponible</span>
-            <span style={{ fontSize: 10.5, background: '#326295', color: '#ffffff', padding: '1px 7px', borderRadius: 10, fontWeight: 800 }}>{availableSquad.length}</span>
-          </div>
-          <div className="onboard-squad-list">
-            {availableSquad.map(p => {
-              const isSelected = selectedPlayerId === p.id;
-              return (
-                <div
-                  key={p.id}
-                  className={`onboard-squad-item${isSelected ? ' is-selected' : ''}`}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.effectAllowed = 'copy';
-                    e.dataTransfer.setData('playerId', p.id);
-                    e.dataTransfer.setData('playerName', p.name);
-                  }}
-                  onClick={() => handleSquadItemClick(p.id)}
-                  title={isSelected ? 'Seleccionado: tocá la cancha para ubicarlo' : 'Arrastrá o tocá para ubicar en cancha'}
-                >
-                  <span className="onboard-squad-num">{p.number || '•'}</span>
-                  <span className="onboard-squad-name">{p.name}</span>
-                  {isSelected && <span className="onboard-squad-check">✓</span>}
-                </div>
-              );
-            })}
-            {availableSquad.length === 0 && (
-              <div className="onboard-squad-empty">
-                Todos ubicados en cancha
-              </div>
-            )}
-          </div>
+      {/* Available Squad List (Screen view only) */}
+      <div className="onboard-squad no-print">
+        <div className="onboard-squad-title">
+          <span>Plantel Disponible</span>
+          <span style={{ fontSize: 10.5, background: '#326295', color: '#ffffff', padding: '1px 7px', borderRadius: 10, fontWeight: 800 }}>{availableSquad.length}</span>
         </div>
-
-        {/* Set Pieces & Observations Section */}
-        <div className="tactic-forms-column">
-          {/* SET PIECES (Only rendered if it's a set piece page) */}
-          {isExtra && (
-            <div className="setpieces-block">
-              <div className="setpieces-header">
-                <div className="setpieces-title">{tacticLabel}</div>
+        <div className="onboard-squad-list">
+          {availableSquad.map(p => {
+            const isSelected = selectedPlayerId === p.id;
+            return (
+              <div
+                key={p.id}
+                className={`onboard-squad-item${isSelected ? ' is-selected' : ''}`}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.effectAllowed = 'copy';
+                  e.dataTransfer.setData('playerId', p.id);
+                  e.dataTransfer.setData('playerName', p.name);
+                }}
+                onClick={() => handleSquadItemClick(p.id)}
+                title={isSelected ? 'Seleccionado: tocá la cancha para ubicarlo' : 'Arrastrá o tocá para ubicar en cancha'}
+              >
+                <span className="onboard-squad-num">{p.number || '•'}</span>
+                <span className="onboard-squad-name">{p.name}</span>
+                {isSelected && <span className="onboard-squad-check">✓</span>}
               </div>
-              <SetpiecesCategory
-                data={match.setpieces[tacticKey]}
-                onChange={(f, v) => handleSetpieceChange(tacticKey, f, v)}
-              />
+            );
+          })}
+          {availableSquad.length === 0 && (
+            <div className="onboard-squad-empty">
+              Todos ubicados en cancha
             </div>
           )}
+        </div>
+      </div>
 
-          {/* OBSERVATIONS */}
-          <div className="observations-block">
-            <div className="observations-title">Observaciones / Indicaciones</div>
-            <textarea
-              className="observations-content"
-              value={match.tactics[tacticKey]?.observations || ''}
-              onChange={e => onMatchChange({
-                ...match,
-                tactics: {
-                  ...match.tactics,
-                  [tacticKey]: {
-                    ...match.tactics[tacticKey],
-                    observations: e.target.value
-                  }
-                }
-              })}
-              placeholder="Escribí notas tácticas, marcas específicas, cambios programados…"
+      {/* Set Pieces & Observations Section */}
+      <div className="tactic-forms-column">
+        {/* SET PIECES (Only rendered if it's a set piece page) */}
+        {isExtra && (
+          <div className="setpieces-block">
+            <div className="setpieces-header">
+              <div className="setpieces-title">{tacticLabel}</div>
+            </div>
+            <SetpiecesCategory
+              data={match.setpieces[setpieceDataKey]}
+              onChange={(f, v) => handleSetpieceChange(setpieceDataKey, f, v)}
             />
           </div>
+        )}
+
+        {/* OBSERVATIONS */}
+        <div className="observations-block">
+          <div className="observations-title">Observaciones / Indicaciones</div>
+          <textarea
+            className="observations-content"
+            value={match.tactics[tacticKey]?.[obsKey] || match.tactics[tacticKey]?.observations || ''}
+            onChange={e => onMatchChange({
+              ...match,
+              tactics: {
+                ...match.tactics,
+                [tacticKey]: {
+                  ...match.tactics[tacticKey],
+                  [obsKey]: e.target.value
+                }
+              }
+            })}
+            placeholder="Escribí notas tácticas, marcas específicas, cambios programados…"
+          />
         </div>
       </div>
     </div>
   );
 }
+
+function PrintPage({
+  match,
+  squad,
+  tacticKey,
+  singleSubKey = null,
+  tacticLabel,
+  isExtra,
+  onMatchChange,
+  onDrop,
+  onPlayerMove,
+  onPlayerRemove,
+  onDeleteMatch,
+  canDeleteMatch,
+  isLast,
+  selectedPlayerId = null,
+  onSelectPlayerForPlacement = null,
+  onClearSelectedPlayer = null,
+}) {
+  return (
+    <div className={`printable-board print-page${isLast ? ' last-page' : ''}`}>
+      {/* Header (Repeated per page) */}
+      <MatchHeader
+        match={match}
+        onMatchChange={onMatchChange}
+        tacticLabel={singleSubKey ? tacticLabel : (isExtra ? `${tacticLabel}` : tacticLabel)}
+        onDeleteMatch={onDeleteMatch}
+        canDeleteMatch={canDeleteMatch}
+      />
+
+      {isExtra && !singleSubKey ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, minHeight: 0 }}>
+          <TacticBody
+            match={match} squad={squad} tacticKey={tacticKey} subKey="players_izq" tacticLabel={`${tacticLabel} (Izquierda)`}
+            isExtra={true} onMatchChange={onMatchChange} onDrop={onDrop} onPlayerMove={onPlayerMove} onPlayerRemove={onPlayerRemove}
+            selectedPlayerId={selectedPlayerId} onSelectPlayerForPlacement={onSelectPlayerForPlacement} onClearSelectedPlayer={onClearSelectedPlayer}
+          />
+          <hr className="no-print" style={{ border: 'none', borderTop: '3px dashed #e2e8f0', margin: '0 20px' }} />
+          <TacticBody
+            match={match} squad={squad} tacticKey={tacticKey} subKey="players_der" tacticLabel={`${tacticLabel} (Derecha)`}
+            isExtra={true} onMatchChange={onMatchChange} onDrop={onDrop} onPlayerMove={onPlayerMove} onPlayerRemove={onPlayerRemove}
+            selectedPlayerId={selectedPlayerId} onSelectPlayerForPlacement={onSelectPlayerForPlacement} onClearSelectedPlayer={onClearSelectedPlayer}
+          />
+        </div>
+      ) : (
+        <TacticBody
+          match={match} squad={squad} tacticKey={tacticKey} subKey={singleSubKey || 'players'} tacticLabel={tacticLabel}
+          isExtra={isExtra} onMatchChange={onMatchChange} onDrop={onDrop} onPlayerMove={onPlayerMove} onPlayerRemove={onPlayerRemove}
+          selectedPlayerId={selectedPlayerId} onSelectPlayerForPlacement={onSelectPlayerForPlacement} onClearSelectedPlayer={onClearSelectedPlayer}
+        />
+      )}
+    </div>
+  );
+}
+
 
 function SetpiecesCategory({ label, data, onChange }) {
   return (
@@ -353,23 +394,28 @@ export default function PrintableBoard({
 
       {/* ── PRINT VIEW: Filtered tactic pages ── */}
       <div className="print-pages-container" style={{ display: 'none' }}>
-        {printTabs.map((t, i) => (
-          <PrintPage
-            key={t.key}
-            match={match}
-            squad={squad}
-            tacticKey={t.key}
-            tacticLabel={t.label}
-            isExtra={t.key !== 'ataque' && t.key !== 'defensa'}
-            onMatchChange={onMatchChange}
-            onDrop={onDrop}
-            onPlayerMove={onPlayerMove}
-            onPlayerRemove={onPlayerRemove}
-            onDeleteMatch={onDeleteMatch}
-            canDeleteMatch={canDeleteMatch}
-            isLast={i === printTabs.length - 1}
-          />
-        ))}
+        {printTabs.map((t, i) => {
+          const isExtra = t.key !== 'ataque' && t.key !== 'defensa';
+          
+          return (
+            <PrintPage
+              key={t.key}
+              match={match}
+              squad={squad}
+              tacticKey={t.key}
+              singleSubKey={isExtra ? null : 'players'}
+              tacticLabel={t.label}
+              isExtra={isExtra}
+              onMatchChange={onMatchChange}
+              onDrop={onDrop}
+              onPlayerMove={onPlayerMove}
+              onPlayerRemove={onPlayerRemove}
+              onDeleteMatch={onDeleteMatch}
+              canDeleteMatch={canDeleteMatch}
+              isLast={i === printTabs.length - 1}
+            />
+          );
+        })}
       </div>
     </>
   );

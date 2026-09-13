@@ -54,15 +54,15 @@ export const loadData = () => {
           if (!tactics.tiros_libres) tactics.tiros_libres = { label: 'Tiros Libres', players: [] };
           if (!tactics.corners) tactics.corners = { label: 'Corners', players: [] };
         }
-        
+
         let setpieces = { ...m.setpieces };
         if (setpieces.tirosLibres || setpieces.corners || setpieces.tl_izq) {
           const oldTL = setpieces.tirosLibres || setpieces.tl_izq || {};
           const oldCorner = setpieces.corners || setpieces.corner_izq || {};
-          
+
           if (!setpieces.tiros_libres) setpieces.tiros_libres = { ejecutan: oldTL.ejecutan || '', cabecean: oldTL.cabecean || '', defensa: oldTL.defensa || '', balance: oldTL.balance || '' };
           if (!setpieces.corners) setpieces.corners = { ejecutan: oldCorner.ejecutan || '', cabecean: oldCorner.cabecean || '', defensa: oldCorner.defensa || '', balance: oldCorner.balance || '' };
-          
+
           delete setpieces.tirosLibres;
           delete setpieces.corners;
           delete setpieces.tl_izq;
