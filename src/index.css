@@ -1613,8 +1613,6 @@ html, body, #root {
     height: auto !important;
   }
 
-  .no-print { display: none !important; }
-
   .app-layout, .app-body, .main-content, .board-scroll {
     display: block !important;
     height: auto !important;
@@ -1623,6 +1621,8 @@ html, body, #root {
     margin: 0 !important;
     background: transparent !important;
   }
+
+  .no-print { display: none !important; }
 
   .sidebar { display: none !important; }
 

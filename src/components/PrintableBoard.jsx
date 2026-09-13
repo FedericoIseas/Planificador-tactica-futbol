@@ -2,21 +2,19 @@ import React, { useState } from 'react';
 import Pitch from './Pitch.jsx';
 
 const TACTIC_TABS = [
-  { key: 'ataque',  label: 'Ataque',         icon: '⚔️' },
-  { key: 'defensa', label: 'Defensa',         icon: '🛡️' },
-  { key: 'extra',   label: 'Pelota Parada',   icon: '🎯' },
+  { key: 'ataque', label: 'Ataque', icon: '⚔️' },
+  { key: 'defensa', label: 'Defensa', icon: '🛡️' },
+  { key: 'tiros_libres', label: 'Tiros Libres', icon: '🎯' },
+  { key: 'corners', label: 'Corners', icon: '🚩' },
 ];
 
-const SETPIECES_TABS = [
-  { key: 'tirosLibres', label: 'Tiros Libres' },
-  { key: 'corners',     label: 'Corners' },
-];
+
 
 const SETPIECES_ROWS = [
   { key: 'ejecutan', label: 'Ejecutan' },
   { key: 'cabecean', label: 'Cabecean' },
-  { key: 'defensa',  label: 'Defensa' },
-  { key: 'balance',  label: 'Balance' },
+  { key: 'defensa', label: 'Defensa' },
+  { key: 'balance', label: 'Balance' },
 ];
 
 /** Formats YYYY-MM-DD → DD/MM/YYYY */
@@ -130,7 +128,7 @@ function PrintPage({
   onSelectPlayerForPlacement = null,
   onClearSelectedPlayer = null,
 }) {
-  const [activeSetpieces, setActiveSetpieces] = useState('tirosLibres');
+
 
   const currentFieldIds = new Set(
     (match.tactics[tacticKey]?.players || []).map(p => p.id)
@@ -217,55 +215,37 @@ function PrintPage({
           </div>
         </div>
 
-        {/* Set Pieces & Observations Section (Rendered on ALL tactic pages: Ataque, Defensa & Pelota Parada) */}
+        {/* Set Pieces & Observations Section */}
         <div className="tactic-forms-column">
-          {/* SET PIECES */}
-          <div className="setpieces-block">
-            <div className="setpieces-header">
-              <div className="setpieces-title">Pelota Parada</div>
-              <div className="setpieces-tabs no-print">
-                {SETPIECES_TABS.map(t => (
-                  <div
-                    key={t.key}
-                    className={`setpieces-tab${activeSetpieces === t.key ? ' active' : ''}`}
-                    onClick={() => setActiveSetpieces(t.key)}
-                  >
-                    {t.label}
-                  </div>
-                ))}
+          {/* SET PIECES (Only rendered if it's a set piece page) */}
+          {isExtra && (
+            <div className="setpieces-block">
+              <div className="setpieces-header">
+                <div className="setpieces-title">{tacticLabel}</div>
               </div>
-            </div>
-
-            {/* Screen: Tabbed view */}
-            <div className="no-print">
               <SetpiecesCategory
-                label={SETPIECES_TABS.find(t => t.key === activeSetpieces)?.label}
-                data={match.setpieces[activeSetpieces]}
-                onChange={(f, v) => handleSetpieceChange(activeSetpieces, f, v)}
+                data={match.setpieces[tacticKey]}
+                onChange={(f, v) => handleSetpieceChange(tacticKey, f, v)}
               />
             </div>
-
-            {/* Print: Both categories side-by-side */}
-            <div className="setpieces-print-row print-only">
-              {SETPIECES_TABS.map(t => (
-                <div key={t.key} style={{ flex: 1 }}>
-                  <SetpiecesCategory
-                    label={t.label}
-                    data={match.setpieces[t.key]}
-                    onChange={(f, v) => handleSetpieceChange(t.key, f, v)}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
 
           {/* OBSERVATIONS */}
           <div className="observations-block">
             <div className="observations-title">Observaciones / Indicaciones</div>
             <textarea
               className="observations-content"
-              value={match.observations || ''}
-              onChange={e => onMatchChange({ ...match, observations: e.target.value })}
+              value={match.tactics[tacticKey]?.observations || ''}
+              onChange={e => onMatchChange({
+                ...match,
+                tactics: {
+                  ...match.tactics,
+                  [tacticKey]: {
+                    ...match.tactics[tacticKey],
+                    observations: e.target.value
+                  }
+                }
+              })}
               placeholder="Escribí notas tácticas, marcas específicas, cambios programados…"
             />
           </div>
@@ -329,7 +309,7 @@ export default function PrintableBoard({
   const setTactic = onTacticChange || setInternalTactic;
   const activeTab = TACTIC_TABS.find(t => t.key === currentTactic);
   // Filter for print — default to all if not provided
-  const sectionsToprint = printSections || { ataque: true, defensa: true, extra: true };
+  const sectionsToprint = printSections || { ataque: true, defensa: true, tiros_libres: true, corners: true };
   const printTabs = TACTIC_TABS.filter(t => sectionsToprint[t.key]);
 
   return (
@@ -357,7 +337,7 @@ export default function PrintableBoard({
           squad={squad}
           tacticKey={currentTactic}
           tacticLabel={activeTab?.label}
-          isExtra={currentTactic === 'extra'}
+          isExtra={currentTactic !== 'ataque' && currentTactic !== 'defensa'}
           onMatchChange={onMatchChange}
           onDrop={onDrop}
           onPlayerMove={onPlayerMove}
@@ -380,7 +360,7 @@ export default function PrintableBoard({
             squad={squad}
             tacticKey={t.key}
             tacticLabel={t.label}
-            isExtra={t.key === 'extra'}
+            isExtra={t.key !== 'ataque' && t.key !== 'defensa'}
             onMatchChange={onMatchChange}
             onDrop={onDrop}
             onPlayerMove={onPlayerMove}

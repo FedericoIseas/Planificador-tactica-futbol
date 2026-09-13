@@ -4,13 +4,14 @@ import PrintableBoard from './components/PrintableBoard.jsx';
 import { DEFAULT_SQUAD, createMatch, loadData, saveData } from './storage.js';
 
 const PRINT_SECTIONS = [
-  { key: 'ataque',  label: 'Ataque',       icon: '⚔️' },
-  { key: 'defensa', label: 'Defensa',       icon: '🛡️' },
-  { key: 'extra',   label: 'Pelota Parada', icon: '🎯' },
+  { key: 'ataque', label: 'Ataque', icon: '⚔️' },
+  { key: 'defensa', label: 'Defensa', icon: '🛡️' },
+  { key: 'tiros_libres', label: 'Tiros Libres', icon: '🎯' },
+  { key: 'corners', label: 'Corners', icon: '🚩' },
 ];
 
 function PrintSectionsModal({ onConfirm, onCancel }) {
-  const [selected, setSelected] = useState({ ataque: true, defensa: true, extra: true });
+  const [selected, setSelected] = useState({ ataque: true, defensa: true, tiros_libres: true, corners: true });
 
   const toggle = (key) => setSelected(prev => ({ ...prev, [key]: !prev[key] }));
   const anySelected = Object.values(selected).some(Boolean);
@@ -77,7 +78,7 @@ export default function App() {
   const [state, setState] = useState(getInitialState);
   const [activeTactic, setActiveTactic] = useState('ataque');
   const [showPrintModal, setShowPrintModal] = useState(false);
-  const [printSections, setPrintSections] = useState({ ataque: true, defensa: true, extra: true });
+  const [printSections, setPrintSections] = useState({ ataque: true, defensa: true, tiros_libres: true, corners: true });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState(null);
   const [showMobileActions, setShowMobileActions] = useState(false);
