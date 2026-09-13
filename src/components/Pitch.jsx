@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 
 /**
  * Pitch — renders an SVG football pitch and acts as an interactive drop zone.
@@ -47,34 +47,43 @@ export default function Pitch({ players, onDrop, onPlayerMove, onPlayerRemove, t
     setGhostPos({ x: player.x, y: player.y, name: player.name });
   }, []);
 
-  const handleMouseMove = useCallback((e) => {
+  useEffect(() => {
     if (!movingPlayer) return;
-    const rect = pitchRef.current.getBoundingClientRect();
-    const xPct = (e.clientX - rect.left - movingPlayer.offsetX) / rect.width * 100;
-    const yPct = (e.clientY - rect.top - movingPlayer.offsetY) / rect.height * 100;
-    const cx = Math.max(3, Math.min(97, xPct));
-    const cy = Math.max(3, Math.min(97, yPct));
-    setGhostPos(g => ({ ...g, x: cx, y: cy }));
-  }, [movingPlayer]);
 
-  const handleMouseUp = useCallback((e) => {
-    if (!movingPlayer) return;
-    const rect = pitchRef.current.getBoundingClientRect();
-    const xPct = (e.clientX - rect.left - movingPlayer.offsetX) / rect.width * 100;
-    const yPct = (e.clientY - rect.top - movingPlayer.offsetY) / rect.height * 100;
-    const cx = Math.max(3, Math.min(97, xPct));
-    const cy = Math.max(3, Math.min(97, yPct));
-    onPlayerMove(movingPlayer.id, cx, cy, tacticKey);
-    setMovingPlayer(null);
-    setGhostPos(null);
-  }, [movingPlayer, onPlayerMove, tacticKey]);
+    const handleWindowMouseMove = (e) => {
+      if (!pitchRef.current) return;
+      const rect = pitchRef.current.getBoundingClientRect();
+      const xPct = (e.clientX - rect.left - movingPlayer.offsetX) / rect.width * 100;
+      const yPct = (e.clientY - rect.top - movingPlayer.offsetY) / rect.height * 100;
+      const cx = Math.max(3, Math.min(97, xPct));
+      const cy = Math.max(3, Math.min(97, yPct));
+      setGhostPos(g => ({ ...g, x: cx, y: cy }));
+    };
 
-  const handleMouseLeave = useCallback(() => {
-    if (movingPlayer) {
+    const handleWindowMouseUp = (e) => {
+      if (!pitchRef.current) {
+        setMovingPlayer(null);
+        setGhostPos(null);
+        return;
+      }
+      const rect = pitchRef.current.getBoundingClientRect();
+      const xPct = (e.clientX - rect.left - movingPlayer.offsetX) / rect.width * 100;
+      const yPct = (e.clientY - rect.top - movingPlayer.offsetY) / rect.height * 100;
+      const cx = Math.max(3, Math.min(97, xPct));
+      const cy = Math.max(3, Math.min(97, yPct));
+      onPlayerMove(movingPlayer.id, cx, cy, tacticKey);
       setMovingPlayer(null);
       setGhostPos(null);
-    }
-  }, [movingPlayer]);
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+    };
+  }, [movingPlayer, onPlayerMove, tacticKey]);
 
   // ViewBox: Full pitch is 200x280. Half pitch (attacking half) is 200x142.
   const svgViewBox = half ? '0 0 200 142' : '0 0 200 280';
@@ -86,9 +95,6 @@ export default function Pitch({ players, onDrop, onPlayerMove, onPlayerRemove, t
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseLeave}
       style={{ userSelect: 'none' }}
     >
       {/* Pitch SVG Graphic */}

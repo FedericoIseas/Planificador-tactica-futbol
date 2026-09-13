@@ -75,6 +75,7 @@ function getInitialState() {
 
 export default function App() {
   const [state, setState] = useState(getInitialState);
+  const [activeTactic, setActiveTactic] = useState('ataque');
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printSections, setPrintSections] = useState({ ataque: true, defensa: true, extra: true });
   const importRef = useRef(null);
@@ -188,7 +189,7 @@ export default function App() {
     }));
   };
 
-  const handleDropOnPitch = (tacticKey, playerId, x, y) => {
+  const handleDropOnPitch = (playerId, x, y, tacticKey) => {
     const playerObj = state.squad.find(p => p.id === playerId);
     if (!playerObj || !activeMatch) return;
 
@@ -209,7 +210,7 @@ export default function App() {
     handleUpdateMatch(updatedMatch);
   };
 
-  const handlePlayerMove = (tacticKey, playerId, x, y) => {
+  const handlePlayerMove = (playerId, x, y, tacticKey) => {
     if (!activeMatch) return;
     const currentPlayers = activeMatch.tactics[tacticKey]?.players || [];
     const updatedPlayers = currentPlayers.map(p => p.id === playerId ? { ...p, x, y } : p);
@@ -227,7 +228,7 @@ export default function App() {
     handleUpdateMatch(updatedMatch);
   };
 
-  const handlePlayerRemoveFromPitch = (tacticKey, playerId) => {
+  const handlePlayerRemoveFromPitch = (playerId, tacticKey) => {
     if (!activeMatch) return;
     const currentPlayers = activeMatch.tactics[tacticKey]?.players || [];
     const updatedPlayers = currentPlayers.filter(p => p.id !== playerId);
@@ -259,7 +260,7 @@ export default function App() {
   };
 
   const fieldPlayerIds = new Set(
-    activeMatch ? Object.values(activeMatch.tactics).flatMap(t => (t.players || []).map(p => p.id)) : []
+    (activeMatch?.tactics?.[activeTactic]?.players || []).map(p => p.id)
   );
 
   return (
@@ -334,6 +335,8 @@ export default function App() {
             <PrintableBoard
               match={activeMatch}
               squad={state.squad}
+              activeTactic={activeTactic}
+              onTacticChange={setActiveTactic}
               onMatchChange={handleUpdateMatch}
               onDrop={handleDropOnPitch}
               onPlayerMove={handlePlayerMove}

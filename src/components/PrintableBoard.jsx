@@ -116,10 +116,10 @@ function MatchHeader({ match, onMatchChange, tacticLabel, onDeleteMatch, canDele
 function PrintPage({ match, squad, tacticKey, tacticLabel, isExtra, onMatchChange, onDrop, onPlayerMove, onPlayerRemove, onDeleteMatch, canDeleteMatch, isLast }) {
   const [activeSetpieces, setActiveSetpieces] = useState('tirosLibres');
 
-  const allFieldIds = new Set(
-    Object.values(match.tactics).flatMap(t => (t.players || []).map(p => p.id))
+  const currentFieldIds = new Set(
+    (match.tactics[tacticKey]?.players || []).map(p => p.id)
   );
-  const availableSquad = squad.filter(p => !allFieldIds.has(p.id));
+  const availableSquad = squad.filter(p => !currentFieldIds.has(p.id));
 
   const handleSetpieceChange = (category, field, value) => {
     onMatchChange({
@@ -161,7 +161,18 @@ function PrintPage({ match, squad, tacticKey, tacticLabel, isExtra, onMatchChang
             <span style={{ fontSize: 10.5, background: '#326295', color: '#ffffff', padding: '1px 7px', borderRadius: 10, fontWeight: 800 }}>{availableSquad.length}</span>
           </div>
           {availableSquad.map(p => (
-            <div key={p.id} className="onboard-squad-item">
+            <div
+              key={p.id}
+              className="onboard-squad-item"
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.effectAllowed = 'copy';
+                e.dataTransfer.setData('playerId', p.id);
+                e.dataTransfer.setData('playerName', p.name);
+              }}
+              style={{ cursor: 'grab' }}
+              title="Arrastrá a la cancha"
+            >
               <span className="onboard-squad-num">{p.number || '•'}</span>
               <span>{p.name}</span>
             </div>
@@ -264,9 +275,11 @@ function SetpiecesCategory({ label, data, onChange }) {
   );
 }
 
-export default function PrintableBoard({ match, squad, onMatchChange, onDrop, onPlayerMove, onPlayerRemove, onDeleteMatch, canDeleteMatch, printSections }) {
-  const [activeTactic, setActiveTactic] = useState('ataque');
-  const activeTab = TACTIC_TABS.find(t => t.key === activeTactic);
+export default function PrintableBoard({ match, squad, activeTactic = 'ataque', onTacticChange, onMatchChange, onDrop, onPlayerMove, onPlayerRemove, onDeleteMatch, canDeleteMatch, printSections }) {
+  const [internalTactic, setInternalTactic] = useState('ataque');
+  const currentTactic = onTacticChange ? activeTactic : internalTactic;
+  const setTactic = onTacticChange || setInternalTactic;
+  const activeTab = TACTIC_TABS.find(t => t.key === currentTactic);
   // Filter for print — default to all if not provided
   const sectionsToprint = printSections || { ataque: true, defensa: true, extra: true };
   const printTabs = TACTIC_TABS.filter(t => sectionsToprint[t.key]);
@@ -279,8 +292,8 @@ export default function PrintableBoard({ match, squad, onMatchChange, onDrop, on
           {TACTIC_TABS.map(t => (
             <button
               key={t.key}
-              className={`tactic-tab-btn${activeTactic === t.key ? ' active' : ''}`}
-              onClick={() => setActiveTactic(t.key)}
+              className={`tactic-tab-btn${currentTactic === t.key ? ' active' : ''}`}
+              onClick={() => setTactic(t.key)}
             >
               <span>{t.icon}</span>
               <span>{t.label}</span>
@@ -294,9 +307,9 @@ export default function PrintableBoard({ match, squad, onMatchChange, onDrop, on
         <PrintPage
           match={match}
           squad={squad}
-          tacticKey={activeTactic}
+          tacticKey={currentTactic}
           tacticLabel={activeTab?.label}
-          isExtra={activeTactic === 'extra'}
+          isExtra={currentTactic === 'extra'}
           onMatchChange={onMatchChange}
           onDrop={onDrop}
           onPlayerMove={onPlayerMove}
