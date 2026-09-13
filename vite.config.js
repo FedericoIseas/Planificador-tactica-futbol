@@ -5,5 +5,5 @@ import react from '@vitejs/plugin-react'
 // base: '/Planificador-tactica-futbol/' for GitHub Pages deployment
 export default defineConfig({
   plugins: [react()],
-  base: './',
+  base: '/Planificador-tactica-futbol/',
 })
