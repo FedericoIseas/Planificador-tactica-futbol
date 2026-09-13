@@ -97,6 +97,33 @@ html, body, #root {
   flex-shrink: 0;
   z-index: 50;
   box-shadow: var(--shadow-card);
+  position: relative;
+}
+
+.btn-sidebar-toggle {
+  display: none;
+  background: #326295;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 20px;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.btn-sidebar-toggle:hover {
+  background: var(--fifa-blue-hover);
+}
+
+.sidebar-toggle-badge {
+  background: #020f2a;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 10px;
 }
 
 .toolbar-brand {
@@ -109,6 +136,7 @@ html, body, #root {
   letter-spacing: -0.01em;
   color: #ffffff;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .toolbar-brand-badge {
@@ -121,6 +149,7 @@ html, body, #root {
   border-radius: var(--r-sm);
   font-size: 14px;
   border: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
 }
 
 .toolbar-divider {
@@ -130,7 +159,15 @@ html, body, #root {
   flex-shrink: 0;
 }
 
-.toolbar-spacer { flex: 1; min-width: 8px; }
+.toolbar-spacer { flex: 1; min-width: 4px; }
+
+.toolbar-matches-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  flex-shrink: 1;
+}
 
 .toolbar-label {
   font-size: 10px;
@@ -138,6 +175,7 @@ html, body, #root {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-2);
+  flex-shrink: 0;
 }
 
 .toolbar-matches {
@@ -146,6 +184,59 @@ html, body, #root {
   gap: 4px;
   overflow-x: auto;
   padding: 2px 0;
+  scrollbar-width: none;
+}
+.toolbar-matches::-webkit-scrollbar { display: none; }
+
+.toolbar-desktop-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.toolbar-mobile-actions-wrapper {
+  display: none;
+  position: relative;
+}
+
+.mobile-actions-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #081738;
+  border: 1px solid #326295;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 100;
+  min-width: 190px;
+  animation: fadeIn 0.15s ease;
+}
+
+.mobile-action-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-body);
+  transition: background 0.12s;
+  width: 100%;
+}
+
+.mobile-action-item:hover, .mobile-action-item:active {
+  background: #152e5a;
 }
 
 /* ── Buttons ────────────────────────────────────────────── */
@@ -251,6 +342,7 @@ html, body, #root {
   border-radius: 20px;
   border: 1px solid #6297ce;
   box-shadow: 0 2px 8px rgba(50, 98, 149, 0.4);
+  flex-shrink: 0;
 }
 .btn-print:hover {
   background: #3f77b3;
@@ -727,11 +819,18 @@ html, body, #root {
   align-items: center;
   gap: 2px;
   transition: transform 0.1s ease;
+  touch-action: none;
 }
 
 .field-player:hover {
   z-index: 30;
   transform: translate(-50%, -50%) scale(1.1);
+}
+
+.field-player.is-dragging {
+  z-index: 50;
+  transform: translate(-50%, -50%) scale(1.18);
+  cursor: grabbing;
 }
 
 .field-player:active { cursor: grabbing; }
@@ -771,15 +870,15 @@ html, body, #root {
 
 .field-player-remove {
   position: absolute;
-  top: -5px;
-  right: -5px;
-  width: 15px;
-  height: 15px;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
   background: #ef4444;
   border: 1.5px solid #ffffff;
   border-radius: 50%;
   color: white;
-  font-size: 9px;
+  font-size: 10px;
   cursor: pointer;
   display: none;
   align-items: center;
@@ -791,12 +890,59 @@ html, body, #root {
 
 .field-player:hover .field-player-remove { display: flex; }
 
+/* ── Placement Mode Indicator (Tap to place) ────────────── */
+.pitch-placement-indicator {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #020f2a;
+  color: #ffffff;
+  border: 1.5px solid #10b981;
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 45;
+  white-space: nowrap;
+  animation: pulseIndicator 1.8s infinite;
+}
+
+@keyframes pulseIndicator {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.pitch-placement-cancel {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #ffffff;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.pitch-wrapper.placement-mode {
+  cursor: crosshair;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.5) !important;
+}
+
 /* ── Available Squad Sidebar on Board (Screen only) ────── */
 .onboard-squad {
   display: flex;
   flex-direction: column;
   gap: 0;
-  min-width: 38mm;
   min-width: 46mm;
   max-width: 56mm;
   background: #f8fafc;
@@ -819,17 +965,39 @@ html, body, #root {
   align-items: center;
   justify-content: space-between;
   gap: 6px;
+  flex-shrink: 0;
+}
+
+.onboard-squad-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
 }
 
 .onboard-squad-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 0;
+  padding: 3px 4px;
   font-size: 11.5px;
   font-weight: 600;
   color: #020f2a;
   border-bottom: 1px dashed #e2e8f0;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.12s ease;
+}
+
+.onboard-squad-item:hover {
+  background: #e2e8f0;
+}
+
+.onboard-squad-item.is-selected {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #10b981;
+  color: #065f46;
+  font-weight: 700;
 }
 
 .onboard-squad-num {
@@ -839,6 +1007,45 @@ html, body, #root {
   width: 16px;
   text-align: right;
   flex-shrink: 0;
+}
+
+.onboard-squad-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.onboard-squad-check {
+  margin-left: auto;
+  color: #10b981;
+  font-weight: 800;
+  font-size: 11px;
+}
+
+.onboard-squad-empty {
+  color: #94a3b8;
+  font-size: 11px;
+  font-style: italic;
+  padding-top: 6px;
+  text-align: center;
+}
+
+/* ── Right Column: Forms & Tactical Observations ───────── */
+.match-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.tactic-forms-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3mm;
+  min-width: 0;
 }
 
 /* ════════════════════════════════════════════════════════
@@ -907,6 +1114,11 @@ html, body, #root {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2mm 3mm;
+}
+
+.setpieces-row-cell {
+  display: flex;
+  flex-direction: column;
 }
 
 .setpieces-cell-label {
@@ -1056,6 +1268,325 @@ html, body, #root {
   margin-top: 16px;
   padding-top: 12px;
   border-top: 1px solid var(--card-border);
+}
+
+/* ════════════════════════════════════════════════════════
+   RESPONSIVE MEDIA QUERIES (Screen Only)
+════════════════════════════════════════════════════════ */
+
+/* ── Tablet & Medium Laptops (max-width: 1024px) ───────── */
+@media screen and (max-width: 1024px) {
+  .board-scroll {
+    overflow-y: auto;
+    overflow-x: hidden;
+    align-items: flex-start;
+    padding: 10px;
+    height: 100%;
+  }
+
+  .printable-board {
+    max-height: none;
+    height: auto;
+    width: 100%;
+    max-width: 100%;
+    padding: 14px 12px;
+    overflow: visible;
+  }
+
+  .tactic-body {
+    gap: 12px;
+    overflow: visible;
+  }
+}
+
+/* ── Mobile Drawer & Compact Header (max-width: 900px) ─── */
+@media screen and (max-width: 900px) {
+  .btn-sidebar-toggle {
+    display: inline-flex;
+  }
+
+  .toolbar-brand-text {
+    font-size: 12px;
+  }
+
+  .toolbar-desktop-actions {
+    display: none;
+  }
+
+  .toolbar-mobile-actions-wrapper {
+    display: block;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 290px;
+    max-width: 85vw;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 0 28px rgba(0, 0, 0, 0.85);
+  }
+
+  .sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-close-btn {
+    display: inline-flex;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(3px);
+    z-index: 95;
+    animation: fadeIn 0.15s ease;
+  }
+}
+
+/* ── Mobile Devices (max-width: 768px) ─────────────────── */
+@media screen and (max-width: 768px) {
+  .toolbar {
+    padding: 0 8px;
+    gap: 6px;
+    height: 48px;
+  }
+
+  .toolbar-brand-text {
+    display: none;
+  }
+
+  .toolbar-label {
+    display: none;
+  }
+
+  .btn {
+    padding: 5px 10px;
+    font-size: 11.5px;
+  }
+
+  .btn-print {
+    padding: 5px 12px;
+  }
+
+  .btn-print-text {
+    display: none;
+  }
+
+  .sidebar-toggle-text {
+    display: none;
+  }
+
+  .tactic-tabs-bar {
+    padding: 6px 6px 0;
+    overflow-x: auto;
+    justify-content: stretch;
+  }
+
+  .tactic-tabs-container {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .tactic-tab-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 6px 8px;
+    font-size: 11.5px;
+  }
+
+  .board-scroll {
+    padding: 8px 6px 36px;
+  }
+
+  .printable-board {
+    border-radius: 10px;
+    padding: 10px 8px;
+    gap: 10px;
+  }
+
+  .match-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding-bottom: 8px;
+  }
+
+  .match-header-left {
+    width: 100%;
+  }
+
+  .match-header-rival-input {
+    font-size: 17px !important;
+  }
+
+  .match-header-right {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .match-header-fields {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    padding: 6px 8px;
+    width: 100%;
+  }
+
+  .match-header-field {
+    min-width: 0;
+  }
+
+  .match-header-input {
+    font-size: 11.5px !important;
+    padding: 4px 4px !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .btn-delete-match {
+    align-self: flex-start;
+    padding: 4px 10px;
+  }
+
+  .tactic-body {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .pitch-wrapper {
+    width: 100%;
+    max-width: 360px;
+    height: auto;
+    aspect-ratio: 200 / 280;
+    margin: 0 auto;
+    max-height: none;
+  }
+
+  .pitch-wrapper.pitch-half {
+    max-width: 360px;
+    height: auto;
+    aspect-ratio: 200 / 142;
+    max-height: none;
+  }
+
+  /* Always show remove button on touch pins on small screens */
+  .field-player-remove {
+    display: flex;
+  }
+
+  .onboard-squad {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+    padding: 8px;
+  }
+
+  .onboard-squad-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 5px;
+    max-height: 110px;
+    overflow-y: auto;
+  }
+
+  .onboard-squad-item {
+    padding: 4px 8px;
+    background: #e2e8f0;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+
+  .onboard-squad-empty {
+    color: #94a3b8;
+    font-size: 11px;
+    font-style: italic;
+    padding: 4px;
+    text-align: center;
+    width: 100%;
+  }
+
+  .tactic-forms-column {
+    width: 100%;
+    gap: 10px;
+  }
+
+  .setpieces-block, .observations-block {
+    padding: 8px;
+  }
+
+  .setpieces-cell-names {
+    font-size: 13px;
+    min-height: 44px;
+  }
+
+  .observations-content {
+    font-size: 13px;
+    min-height: 64px;
+  }
+
+  .print-modal {
+    width: calc(100% - 24px);
+    min-width: unset;
+    max-width: 400px;
+    padding: 20px 16px;
+  }
+}
+
+/* ── Narrow Mobile Phones (max-width: 480px) ───────────── */
+@media screen and (max-width: 480px) {
+  .match-header-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .match-header-field:last-child {
+    grid-column: span 2;
+  }
+
+  .setpieces-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .pitch-wrapper {
+    max-width: 100%;
+  }
+
+  .pitch-wrapper.pitch-half {
+    max-width: 100%;
+  }
+}
+
+/* ── Very Small Mobile Phones (max-width: 360px) ───────── */
+@media screen and (max-width: 360px) {
+  .toolbar-brand-badge {
+    display: none;
+  }
+
+  .tactic-tab-btn {
+    font-size: 10.5px;
+    padding: 5px 4px;
+  }
 }
 
 /* ════════════════════════════════════════════════════════

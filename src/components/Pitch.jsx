@@ -2,15 +2,24 @@ import React, { useRef, useState, useCallback, useEffect } from 'react';
 
 /**
  * Pitch — renders an SVG football pitch and acts as an interactive drop zone.
- * Players on the pitch are rendered as tactical pins with jersey numbers.
+ * Supports mouse drag-and-drop, touch gestures for mobile/tablet, and tap-to-place.
  */
-export default function Pitch({ players, onDrop, onPlayerMove, onPlayerRemove, tacticKey, half = false }) {
+export default function Pitch({
+  players,
+  onDrop,
+  onPlayerMove,
+  onPlayerRemove,
+  tacticKey,
+  half = false,
+  selectedPlayerId = null,
+  onClearSelectedPlayer = null,
+}) {
   const pitchRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
   const [movingPlayer, setMovingPlayer] = useState(null);
   const [ghostPos, setGhostPos] = useState(null);
 
-  // ── Drop from sidebar ──────────────────────────────────────
+  // ── Drop from sidebar (Desktop Mouse DND) ─────────────────
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
@@ -28,22 +37,51 @@ export default function Pitch({ players, onDrop, onPlayerMove, onPlayerRemove, t
     if (!playerId) return;
 
     const rect = pitchRef.current.getBoundingClientRect();
-    const xPct = (e.clientX - rect.left) / rect.width * 100;
-    const yPct = (e.clientY - rect.top) / rect.height * 100;
+    const xPct = ((e.clientX - rect.left) / rect.width) * 100;
+    const yPct = ((e.clientY - rect.top) / rect.height) * 100;
     const clampedX = Math.max(3, Math.min(97, xPct));
     const clampedY = Math.max(3, Math.min(97, yPct));
 
     onDrop(playerId, clampedX, clampedY, tacticKey);
-  }, [onDrop, tacticKey]);
+    if (onClearSelectedPlayer) onClearSelectedPlayer();
+  }, [onDrop, tacticKey, onClearSelectedPlayer]);
 
-  // ── Move already-placed players ───────────────────────────
+  // ── Tap-to-Place (Mobile & Desktop quick placement) ───────
+  const handlePitchClick = useCallback((e) => {
+    if (!selectedPlayerId || !onDrop || !pitchRef.current) return;
+    // Prevent if clicking on an existing player pin
+    if (e.target.closest('.field-player')) return;
+
+    const rect = pitchRef.current.getBoundingClientRect();
+    const xPct = ((e.clientX - rect.left) / rect.width) * 100;
+    const yPct = ((e.clientY - rect.top) / rect.height) * 100;
+    const clampedX = Math.max(3, Math.min(97, xPct));
+    const clampedY = Math.max(3, Math.min(97, yPct));
+
+    onDrop(selectedPlayerId, clampedX, clampedY, tacticKey);
+    if (onClearSelectedPlayer) onClearSelectedPlayer();
+  }, [selectedPlayerId, onDrop, tacticKey, onClearSelectedPlayer]);
+
+  // ── Move already-placed players (Mouse) ───────────────────
   const handlePlayerMouseDown = useCallback((e, player) => {
     e.preventDefault();
     e.stopPropagation();
     const rect = pitchRef.current.getBoundingClientRect();
     const offsetX = e.clientX - rect.left - (player.x / 100 * rect.width);
     const offsetY = e.clientY - rect.top - (player.y / 100 * rect.height);
-    setMovingPlayer({ id: player.id, offsetX, offsetY });
+    setMovingPlayer({ id: player.id, offsetX, offsetY, isTouch: false });
+    setGhostPos({ x: player.x, y: player.y, name: player.name });
+  }, []);
+
+  // ── Move already-placed players (Touch) ───────────────────
+  const handlePlayerTouchStart = useCallback((e, player) => {
+    const touch = e.touches[0];
+    if (!touch || !pitchRef.current) return;
+    e.stopPropagation();
+    const rect = pitchRef.current.getBoundingClientRect();
+    const offsetX = touch.clientX - rect.left - (player.x / 100 * rect.width);
+    const offsetY = touch.clientY - rect.top - (player.y / 100 * rect.height);
+    setMovingPlayer({ id: player.id, offsetX, offsetY, isTouch: true });
     setGhostPos({ x: player.x, y: player.y, name: player.name });
   }, []);
 
@@ -53,8 +91,8 @@ export default function Pitch({ players, onDrop, onPlayerMove, onPlayerRemove, t
     const handleWindowMouseMove = (e) => {
       if (!pitchRef.current) return;
       const rect = pitchRef.current.getBoundingClientRect();
-      const xPct = (e.clientX - rect.left - movingPlayer.offsetX) / rect.width * 100;
-      const yPct = (e.clientY - rect.top - movingPlayer.offsetY) / rect.height * 100;
+      const xPct = ((e.clientX - rect.left - movingPlayer.offsetX) / rect.width) * 100;
+      const yPct = ((e.clientY - rect.top - movingPlayer.offsetY) / rect.height) * 100;
       const cx = Math.max(3, Math.min(97, xPct));
       const cy = Math.max(3, Math.min(97, yPct));
       setGhostPos(g => ({ ...g, x: cx, y: cy }));
@@ -67,8 +105,8 @@ export default function Pitch({ players, onDrop, onPlayerMove, onPlayerRemove, t
         return;
       }
       const rect = pitchRef.current.getBoundingClientRect();
-      const xPct = (e.clientX - rect.left - movingPlayer.offsetX) / rect.width * 100;
-      const yPct = (e.clientY - rect.top - movingPlayer.offsetY) / rect.height * 100;
+      const xPct = ((e.clientX - rect.left - movingPlayer.offsetX) / rect.width) * 100;
+      const yPct = ((e.clientY - rect.top - movingPlayer.offsetY) / rect.height) * 100;
       const cx = Math.max(3, Math.min(97, xPct));
       const cy = Math.max(3, Math.min(97, yPct));
       onPlayerMove(movingPlayer.id, cx, cy, tacticKey);
@@ -76,12 +114,49 @@ export default function Pitch({ players, onDrop, onPlayerMove, onPlayerRemove, t
       setGhostPos(null);
     };
 
+    const handleWindowTouchMove = (e) => {
+      if (!pitchRef.current || !e.touches[0]) return;
+      if (e.cancelable) e.preventDefault(); // Prevent screen scroll while dragging player
+      const touch = e.touches[0];
+      const rect = pitchRef.current.getBoundingClientRect();
+      const xPct = ((touch.clientX - rect.left - movingPlayer.offsetX) / rect.width) * 100;
+      const yPct = ((touch.clientY - rect.top - movingPlayer.offsetY) / rect.height) * 100;
+      const cx = Math.max(3, Math.min(97, xPct));
+      const cy = Math.max(3, Math.min(97, yPct));
+      setGhostPos(g => ({ ...g, x: cx, y: cy }));
+    };
+
+    const handleWindowTouchEnd = (e) => {
+      if (!pitchRef.current) {
+        setMovingPlayer(null);
+        setGhostPos(null);
+        return;
+      }
+      const touch = e.changedTouches?.[0];
+      if (touch) {
+        const rect = pitchRef.current.getBoundingClientRect();
+        const xPct = ((touch.clientX - rect.left - movingPlayer.offsetX) / rect.width) * 100;
+        const yPct = ((touch.clientY - rect.top - movingPlayer.offsetY) / rect.height) * 100;
+        const cx = Math.max(3, Math.min(97, xPct));
+        const cy = Math.max(3, Math.min(97, yPct));
+        onPlayerMove(movingPlayer.id, cx, cy, tacticKey);
+      }
+      setMovingPlayer(null);
+      setGhostPos(null);
+    };
+
     window.addEventListener('mousemove', handleWindowMouseMove);
     window.addEventListener('mouseup', handleWindowMouseUp);
+    window.addEventListener('touchmove', handleWindowTouchMove, { passive: false });
+    window.addEventListener('touchend', handleWindowTouchEnd);
+    window.addEventListener('touchcancel', handleWindowTouchEnd);
 
     return () => {
       window.removeEventListener('mousemove', handleWindowMouseMove);
       window.removeEventListener('mouseup', handleWindowMouseUp);
+      window.removeEventListener('touchmove', handleWindowTouchMove);
+      window.removeEventListener('touchend', handleWindowTouchEnd);
+      window.removeEventListener('touchcancel', handleWindowTouchEnd);
     };
   }, [movingPlayer, onPlayerMove, tacticKey]);
 
@@ -90,11 +165,12 @@ export default function Pitch({ players, onDrop, onPlayerMove, onPlayerRemove, t
 
   return (
     <div
-      className={`pitch-wrapper${dragOver ? ' drop-active' : ''}${half ? ' pitch-half' : ''}`}
+      className={`pitch-wrapper${dragOver ? ' drop-active' : ''}${half ? ' pitch-half' : ''}${selectedPlayerId ? ' placement-mode' : ''}`}
       ref={pitchRef}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onClick={handlePitchClick}
       style={{ userSelect: 'none' }}
     >
       {/* Pitch SVG Graphic */}
@@ -161,6 +237,15 @@ export default function Pitch({ players, onDrop, onPlayerMove, onPlayerRemove, t
         )}
       </svg>
 
+      {/* Touch / Placement Mode Helper banner (Screen only) */}
+      {selectedPlayerId && (
+        <div className="pitch-placement-indicator no-print">
+          <span>👆 Tocá la cancha para ubicar al jugador</span>
+          {onClearSelectedPlayer && (
+            <button className="pitch-placement-cancel" onClick={(e) => { e.stopPropagation(); onClearSelectedPlayer(); }}>✕</button>
+          )}
+        </div>
+      )}
 
       {/* Players on Field */}
       {players.map((player) => {
@@ -171,9 +256,10 @@ export default function Pitch({ players, onDrop, onPlayerMove, onPlayerRemove, t
         return (
           <div
             key={player.id}
-            className="field-player"
+            className={`field-player${isMoving ? ' is-dragging' : ''}`}
             style={{ left: `${displayX}%`, top: `${displayY}%` }}
             onMouseDown={(e) => handlePlayerMouseDown(e, player)}
+            onTouchStart={(e) => handlePlayerTouchStart(e, player)}
           >
             <div className="field-player-pin">
               {player.number || '•'}
@@ -184,6 +270,7 @@ export default function Pitch({ players, onDrop, onPlayerMove, onPlayerRemove, t
             <button
               className="field-player-remove no-print"
               onClick={(e) => { e.stopPropagation(); onPlayerRemove(player.id, tacticKey); }}
+              onTouchEnd={(e) => { e.stopPropagation(); onPlayerRemove(player.id, tacticKey); }}
               title="Quitar de la cancha"
             >×</button>
           </div>

@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 
-export default function Sidebar({ squad, fieldPlayerIds, onAddPlayer, onRemovePlayer }) {
+export default function Sidebar({
+  squad,
+  fieldPlayerIds,
+  onAddPlayer,
+  onRemovePlayer,
+  isOpen = false,
+  onClose,
+  selectedPlayerId = null,
+  onSelectPlayerForPlacement,
+}) {
   const [newName, setNewName] = useState('');
   const [newNum, setNewNum] = useState('');
 
@@ -19,12 +28,39 @@ export default function Sidebar({ squad, fieldPlayerIds, onAddPlayer, onRemovePl
     e.dataTransfer.setData('playerName', player.name);
   };
 
+  const handlePlayerClick = (player, isOnField) => {
+    if (isOnField) return;
+    if (onSelectPlayerForPlacement) {
+      if (selectedPlayerId === player.id) {
+        onSelectPlayerForPlacement(null);
+      } else {
+        onSelectPlayerForPlacement(player.id);
+        // On small mobile screens, auto-closing the drawer after selecting makes it easy to tap the pitch
+        if (window.innerWidth < 768 && onClose) {
+          onClose();
+        }
+      }
+    }
+  };
+
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${isOpen ? ' is-open' : ''}`}>
       <div className="sidebar-header">
         <div className="sidebar-title-row">
-          <span className="sidebar-title">📋 Plantilla</span>
-          <span className="sidebar-count-badge">{squad.length} jug.</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className="sidebar-title">📋 Plantilla</span>
+            <span className="sidebar-count-badge">{squad.length} jug.</span>
+          </div>
+          {onClose && (
+            <button
+              className="sidebar-close-btn no-print"
+              onClick={onClose}
+              title="Cerrar panel de plantilla"
+              aria-label="Cerrar"
+            >
+              ✕
+            </button>
+          )}
         </div>
         <form className="sidebar-add-form" onSubmit={handleAdd}>
           <input
@@ -34,6 +70,7 @@ export default function Sidebar({ squad, fieldPlayerIds, onAddPlayer, onRemovePl
             value={newNum}
             onChange={e => setNewNum(e.target.value)}
             maxLength={3}
+            inputMode="numeric"
           />
           <input
             type="text"
@@ -55,13 +92,21 @@ export default function Sidebar({ squad, fieldPlayerIds, onAddPlayer, onRemovePl
         )}
         {squad.map((player) => {
           const isOnField = fieldPlayerIds.has(player.id);
+          const isSelected = selectedPlayerId === player.id;
           return (
             <div
               key={player.id}
-              className={`player-token${isOnField ? ' on-field' : ''}`}
+              className={`player-token${isOnField ? ' on-field' : ''}${isSelected ? ' is-selected' : ''}`}
               draggable={!isOnField}
               onDragStart={(e) => handleDragStart(e, player)}
-              title={isOnField ? 'Ya ubicado en este partido' : 'Arrastrá a la cancha'}
+              onClick={() => handlePlayerClick(player, isOnField)}
+              title={
+                isOnField
+                  ? 'Ya ubicado en este partido'
+                  : isSelected
+                    ? 'Seleccionado: tocá la cancha para ubicarlo'
+                    : 'Tocá o arrastrá a la cancha'
+              }
             >
               <div className="player-token-jersey">
                 {player.number || '•'}
@@ -70,12 +115,17 @@ export default function Sidebar({ squad, fieldPlayerIds, onAddPlayer, onRemovePl
               <div className="player-token-actions">
                 {isOnField ? (
                   <span style={{ fontSize: 11, color: '#60a5fa' }} title="En cancha">📍</span>
+                ) : isSelected ? (
+                  <span style={{ fontSize: 11, color: '#10b981', fontWeight: 800 }}>✓ Listo</span>
                 ) : (
                   <span style={{ fontSize: 12, color: 'var(--text-3)', cursor: 'grab' }}>⠿</span>
                 )}
                 <button
                   className="btn btn-danger btn-close"
-                  onClick={() => onRemovePlayer(player.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemovePlayer(player.id);
+                  }}
                   title="Eliminar de plantilla"
                 >×</button>
               </div>
@@ -86,7 +136,7 @@ export default function Sidebar({ squad, fieldPlayerIds, onAddPlayer, onRemovePl
 
       <div className="sidebar-footer-hint">
         <span>💡</span>
-        <span>Arrastrá un jugador hacia la cancha</span>
+        <span>Arrastrá o tocá un jugador para ubicarlo</span>
       </div>
     </aside>
   );

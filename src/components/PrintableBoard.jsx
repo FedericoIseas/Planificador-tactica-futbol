@@ -66,7 +66,7 @@ function MatchHeader({ match, onMatchChange, tacticLabel, onDeleteMatch, canDele
       </div>
 
       {/* Right Column: Key Match Details & Delete Action */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+      <div className="match-header-right">
         <div className="match-header-fields">
           <div className="match-header-field">
             <span className="match-header-label">📅 Fecha</span>
@@ -113,7 +113,23 @@ function MatchHeader({ match, onMatchChange, tacticLabel, onDeleteMatch, canDele
 }
 
 /** Single printable sheet component */
-function PrintPage({ match, squad, tacticKey, tacticLabel, isExtra, onMatchChange, onDrop, onPlayerMove, onPlayerRemove, onDeleteMatch, canDeleteMatch, isLast }) {
+function PrintPage({
+  match,
+  squad,
+  tacticKey,
+  tacticLabel,
+  isExtra,
+  onMatchChange,
+  onDrop,
+  onPlayerMove,
+  onPlayerRemove,
+  onDeleteMatch,
+  canDeleteMatch,
+  isLast,
+  selectedPlayerId = null,
+  onSelectPlayerForPlacement = null,
+  onClearSelectedPlayer = null,
+}) {
   const [activeSetpieces, setActiveSetpieces] = useState('tirosLibres');
 
   const currentFieldIds = new Set(
@@ -129,6 +145,15 @@ function PrintPage({ match, squad, tacticKey, tacticLabel, isExtra, onMatchChang
         [category]: { ...match.setpieces[category], [field]: value }
       },
     });
+  };
+
+  const handleSquadItemClick = (playerId) => {
+    if (!onSelectPlayerForPlacement) return;
+    if (selectedPlayerId === playerId) {
+      onSelectPlayerForPlacement(null);
+    } else {
+      onSelectPlayerForPlacement(playerId);
+    }
   };
 
   return (
@@ -152,6 +177,8 @@ function PrintPage({ match, squad, tacticKey, tacticLabel, isExtra, onMatchChang
           onPlayerMove={onPlayerMove}
           onPlayerRemove={onPlayerRemove}
           half={isExtra}
+          selectedPlayerId={selectedPlayerId}
+          onClearSelectedPlayer={onClearSelectedPlayer}
         />
 
         {/* Available Squad List (Screen view only) */}
@@ -160,32 +187,38 @@ function PrintPage({ match, squad, tacticKey, tacticLabel, isExtra, onMatchChang
             <span>Plantel Disponible</span>
             <span style={{ fontSize: 10.5, background: '#326295', color: '#ffffff', padding: '1px 7px', borderRadius: 10, fontWeight: 800 }}>{availableSquad.length}</span>
           </div>
-          {availableSquad.map(p => (
-            <div
-              key={p.id}
-              className="onboard-squad-item"
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.effectAllowed = 'copy';
-                e.dataTransfer.setData('playerId', p.id);
-                e.dataTransfer.setData('playerName', p.name);
-              }}
-              style={{ cursor: 'grab' }}
-              title="Arrastrá a la cancha"
-            >
-              <span className="onboard-squad-num">{p.number || '•'}</span>
-              <span>{p.name}</span>
-            </div>
-          ))}
-          {availableSquad.length === 0 && (
-            <div style={{ color: '#94a3b8', fontSize: 11, fontStyle: 'italic', paddingTop: 6, textAlign: 'center' }}>
-              Todos ubicados en cancha
-            </div>
-          )}
+          <div className="onboard-squad-list">
+            {availableSquad.map(p => {
+              const isSelected = selectedPlayerId === p.id;
+              return (
+                <div
+                  key={p.id}
+                  className={`onboard-squad-item${isSelected ? ' is-selected' : ''}`}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.effectAllowed = 'copy';
+                    e.dataTransfer.setData('playerId', p.id);
+                    e.dataTransfer.setData('playerName', p.name);
+                  }}
+                  onClick={() => handleSquadItemClick(p.id)}
+                  title={isSelected ? 'Seleccionado: tocá la cancha para ubicarlo' : 'Arrastrá o tocá para ubicar en cancha'}
+                >
+                  <span className="onboard-squad-num">{p.number || '•'}</span>
+                  <span className="onboard-squad-name">{p.name}</span>
+                  {isSelected && <span className="onboard-squad-check">✓</span>}
+                </div>
+              );
+            })}
+            {availableSquad.length === 0 && (
+              <div className="onboard-squad-empty">
+                Todos ubicados en cancha
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Set Pieces & Observations Section (Rendered on ALL tactic pages: Ataque, Defensa & Pelota Parada) */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3mm', minWidth: 0 }}>
+        <div className="tactic-forms-column">
           {/* SET PIECES */}
           <div className="setpieces-block">
             <div className="setpieces-header">
@@ -259,7 +292,7 @@ function SetpiecesCategory({ label, data, onChange }) {
       )}
       <div className="setpieces-grid">
         {SETPIECES_ROWS.map(row => (
-          <div key={row.key}>
+          <div key={row.key} className="setpieces-row-cell">
             <div className="setpieces-cell-label">{row.label}</div>
             <textarea
               className="setpieces-cell-names"
@@ -275,7 +308,22 @@ function SetpiecesCategory({ label, data, onChange }) {
   );
 }
 
-export default function PrintableBoard({ match, squad, activeTactic = 'ataque', onTacticChange, onMatchChange, onDrop, onPlayerMove, onPlayerRemove, onDeleteMatch, canDeleteMatch, printSections }) {
+export default function PrintableBoard({
+  match,
+  squad,
+  activeTactic = 'ataque',
+  onTacticChange,
+  onMatchChange,
+  onDrop,
+  onPlayerMove,
+  onPlayerRemove,
+  onDeleteMatch,
+  canDeleteMatch,
+  printSections,
+  selectedPlayerId = null,
+  onSelectPlayerForPlacement = null,
+  onClearSelectedPlayer = null,
+}) {
   const [internalTactic, setInternalTactic] = useState('ataque');
   const currentTactic = onTacticChange ? activeTactic : internalTactic;
   const setTactic = onTacticChange || setInternalTactic;
@@ -317,6 +365,9 @@ export default function PrintableBoard({ match, squad, activeTactic = 'ataque', 
           onDeleteMatch={onDeleteMatch}
           canDeleteMatch={canDeleteMatch}
           isLast={false}
+          selectedPlayerId={selectedPlayerId}
+          onSelectPlayerForPlacement={onSelectPlayerForPlacement}
+          onClearSelectedPlayer={onClearSelectedPlayer}
         />
       </div>
 

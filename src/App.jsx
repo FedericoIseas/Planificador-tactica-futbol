@@ -78,6 +78,9 @@ export default function App() {
   const [activeTactic, setActiveTactic] = useState('ataque');
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printSections, setPrintSections] = useState({ ataque: true, defensa: true, extra: true });
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedPlayerId, setSelectedPlayerId] = useState(null);
+  const [showMobileActions, setShowMobileActions] = useState(false);
   const importRef = useRef(null);
 
   // Export all data as JSON file
@@ -90,6 +93,7 @@ export default function App() {
     a.download = `planificador_tactico_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    setShowMobileActions(false);
   };
 
   // Import all data from JSON file
@@ -113,6 +117,7 @@ export default function App() {
     };
     reader.readAsText(file);
     e.target.value = '';
+    setShowMobileActions(false);
   };
 
   useEffect(() => {
@@ -171,6 +176,7 @@ export default function App() {
   };
 
   const handleRemovePlayerFromSquad = (playerId) => {
+    if (selectedPlayerId === playerId) setSelectedPlayerId(null);
     setState(prev => ({
       ...prev,
       squad: prev.squad.filter(p => p.id !== playerId),
@@ -208,6 +214,7 @@ export default function App() {
       },
     };
     handleUpdateMatch(updatedMatch);
+    setSelectedPlayerId(null);
   };
 
   const handlePlayerMove = (playerId, x, y, tacticKey) => {
@@ -267,44 +274,90 @@ export default function App() {
     <div className="app-layout">
       {/* Top Header Bar / Toolbar */}
       <header className="toolbar no-print">
+        {/* Mobile Squad Toggle Button */}
+        <button
+          className="btn btn-sidebar-toggle no-print"
+          onClick={() => setIsSidebarOpen(prev => !prev)}
+          title="Abrir plantilla de jugadores"
+          aria-label="Abrir plantilla"
+        >
+          <span>📋</span>
+          <span className="sidebar-toggle-text">Plantilla</span>
+          <span className="sidebar-toggle-badge">{state.squad.length}</span>
+        </button>
+
         <div className="toolbar-brand">
           <div className="toolbar-brand-badge">⚽</div>
-          <span>PLANIFICADOR TÁCTICO</span>
+          <span className="toolbar-brand-text">PLANIFICADOR TÁCTICO</span>
         </div>
 
         <div className="toolbar-divider" />
 
-        <span className="toolbar-label">FECHAS:</span>
-
-        <div className="toolbar-matches">
-          {state.matches.map(m => (
+        <div className="toolbar-matches-section">
+          <span className="toolbar-label">FECHAS:</span>
+          <div className="toolbar-matches">
+            {state.matches.map(m => (
+              <button
+                key={m.id}
+                className={`btn btn-match${m.id === state.activeMatchId ? ' active' : ''}`}
+                onClick={() => handleSelectMatch(m.id)}
+              >
+                {m.label || 'Fecha'}{m.rival ? ` (${m.rival})` : ''}
+              </button>
+            ))}
             <button
-              key={m.id}
-              className={`btn btn-match${m.id === state.activeMatchId ? ' active' : ''}`}
-              onClick={() => handleSelectMatch(m.id)}
+              className="btn btn-ghost btn-new-match"
+              onClick={handleNewMatch}
+              title="Agregar nueva fecha"
             >
-              {m.label || 'Fecha'}{m.rival ? ` (${m.rival})` : ''}
+              + Nueva Fecha
             </button>
-          ))}
-          <button
-            className="btn btn-ghost"
-            onClick={handleNewMatch}
-            title="Agregar nueva fecha"
-          >
-            + Nueva Fecha
-          </button>
+          </div>
         </div>
 
         <div className="toolbar-spacer" />
 
-        <button className="btn btn-ghost" onClick={handleExport} title="Exportar backup JSON">
-          <span>⬇</span>
-          <span>Exportar</span>
-        </button>
-        <button className="btn btn-ghost" onClick={() => importRef.current?.click()} title="Cargar backup JSON">
-          <span>⬆</span>
-          <span>Importar</span>
-        </button>
+        {/* Desktop Actions */}
+        <div className="toolbar-desktop-actions">
+          <button className="btn btn-ghost" onClick={handleExport} title="Exportar backup JSON">
+            <span>⬇</span>
+            <span>Exportar</span>
+          </button>
+          <button className="btn btn-ghost" onClick={() => importRef.current?.click()} title="Cargar backup JSON">
+            <span>⬆</span>
+            <span>Importar</span>
+          </button>
+        </div>
+
+        {/* Mobile Actions Menu Toggle */}
+        <div className="toolbar-mobile-actions-wrapper">
+          <button
+            className="btn btn-ghost btn-icon"
+            onClick={() => setShowMobileActions(prev => !prev)}
+            title="Más opciones"
+            aria-label="Opciones"
+          >
+            ⚙️
+          </button>
+
+          {showMobileActions && (
+            <div className="mobile-actions-menu">
+              <button className="mobile-action-item" onClick={handleNewMatch}>
+                <span>➕</span>
+                <span>Nueva Fecha</span>
+              </button>
+              <button className="mobile-action-item" onClick={handleExport}>
+                <span>⬇️</span>
+                <span>Exportar Backup (JSON)</span>
+              </button>
+              <button className="mobile-action-item" onClick={() => { setShowMobileActions(false); importRef.current?.click(); }}>
+                <span>⬆️</span>
+                <span>Importar Backup (JSON)</span>
+              </button>
+            </div>
+          )}
+        </div>
+
         <input
           ref={importRef}
           type="file"
@@ -317,17 +370,29 @@ export default function App() {
 
         <button className="btn btn-print" onClick={handlePrint} title="Imprimir o guardar PDF">
           <span>🖨️</span>
-          <span>Imprimir</span>
+          <span className="btn-print-text">Imprimir</span>
         </button>
       </header>
 
       {/* Main Content Area */}
       <div className="app-body">
+        {/* Backdrop for mobile drawer */}
+        {isSidebarOpen && (
+          <div
+            className="sidebar-backdrop no-print"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+
         <Sidebar
           squad={state.squad}
           fieldPlayerIds={fieldPlayerIds}
           onAddPlayer={handleAddPlayer}
           onRemovePlayer={handleRemovePlayerFromSquad}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          selectedPlayerId={selectedPlayerId}
+          onSelectPlayerForPlacement={setSelectedPlayerId}
         />
 
         {activeMatch && (
@@ -344,6 +409,9 @@ export default function App() {
               onDeleteMatch={() => handleDeleteMatch(activeMatch.id)}
               canDeleteMatch={state.matches.length > 1}
               printSections={printSections}
+              selectedPlayerId={selectedPlayerId}
+              onSelectPlayerForPlacement={setSelectedPlayerId}
+              onClearSelectedPlayer={() => setSelectedPlayerId(null)}
             />
           </main>
         )}
