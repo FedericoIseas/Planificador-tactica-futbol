@@ -123,9 +123,9 @@ La aplicación incluye un sistema de exportación profesional e impresión calib
 - **[jsPDF](https://github.com/parallax/jsPDF)** + **[html2canvas](https://html2canvas.hertzen.com/)**: Motor de generación y captura DOM de documentos PDF en A4 landscape de alta definición.
 - **[Vanilla CSS3](https://developer.mozilla.org/es/docs/Web/CSS)**:
   - Sistema de diseño con variables CSS (`:root` tokens).
-  - Estética inspirada en el sistema profesional **Football Manager** y **FIFA World Cup 2026** (paleta Deep Navy `#020f2a`, Slate `#0f172a`, resaltados en magenta `#ec4899` y acentos esmeralda `#10b981`).
-  - Navegación superior de 2 líneas (Línea de Fechas/Torneo + Línea de Funciones Principales).
-  - Arquitectura **Zero-Scroll (100vh)** para visualizar la pizarra completa y paneles sin deslizar la pantalla.
+  - Estética inspirada en el sistema oficial **FIFA World Cup 2026** (paleta Deep Navy `#020f2a`, FIFA Blue `#326295`, Negro `#000000` y acentos esmeralda).
+  - Maquetación híbrida con **CSS Grid** y **Flexbox**.
+  - Tipografías modernas integradas vía Google Fonts (*Poppins* e *Inter*).
   - Reglas `@media print` y `@page` avanzadas para PDF.
 - **[SVGs Nativos](https://developer.mozilla.org/es/docs/Web/SVG)**: Íconos y gráficos vectoriales ligeros para la cancha, íconos de encabezado y camisetas de jugadores.
 - **[Oxlint](https://oxc.rs/)**: Linter de alto rendimiento en Rust para garantizar código limpio y libre de errores.
