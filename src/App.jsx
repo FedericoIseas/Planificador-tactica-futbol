@@ -725,6 +725,16 @@ export default function App() {
             <span className="fm-brand-title">PLANIFICADOR TÁCTICO</span>
           </div>
 
+          <button
+            className="fm-sidebar-toggle-btn no-print"
+            onClick={() => setIsSidebarOpen(prev => !prev)}
+            title="Abrir plantilla y convocados"
+          >
+            <span className="fm-sidebar-toggle-icon">📋</span>
+            <span className="fm-sidebar-toggle-text">Plantilla</span>
+            <span className="fm-sidebar-toggle-badge">{displaySquad.length}</span>
+          </button>
+
           <div className="fm-divider" />
 
           {/* Football Manager Pro Match Selector Dropdown (Line 1) */}

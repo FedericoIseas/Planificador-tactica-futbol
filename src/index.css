@@ -142,6 +142,37 @@ body,
   font-size: 14px;
 }
 
+.fm-sidebar-toggle-btn {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  background: rgba(50, 98, 149, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 4px 9px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fm-sidebar-toggle-btn:hover {
+  background: #326295;
+  border-color: #326295;
+}
+
+.fm-sidebar-toggle-badge {
+  background: #10b981;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
 .fm-divider {
   width: 1px;
   height: 18px;
@@ -491,107 +522,154 @@ body,
   min-width: 8px;
 }
 
+.fm-header-wrapper {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #091326 0%, #050b18 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  z-index: 50;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Tier 1: Fechas & Global Navigation (Height: 42px) */
+.fm-tier-1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  height: 42px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.fm-brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fm-brand-icon {
+  font-size: 15px;
+}
+
+.fm-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.14);
+  flex-shrink: 0;
+}
+
 .fm-tier1-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
 }
 
 .fm-btn-pdf {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 12px;
-  background: linear-gradient(135deg, #10b981, #059669);
+  gap: 6px;
+  padding: 5px 14px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: #ffffff;
   border: none;
-  border-radius: 14px;
-  font-size: 11.5px;
+  border-radius: 8px;
+  font-size: 12px;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-  transition: all 0.15s ease;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35);
+  transition: all 0.18s ease;
 }
 
 .fm-btn-pdf:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.5);
 }
 
 .fm-btn-icon {
-  padding: 4px 9px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
+  padding: 5px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
   color: #cbd5e1;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .fm-btn-icon:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
-/* Tier 2: Funciones Principales (Height: 34px) */
+/* Tier 2: Funciones Principales (Height: 38px) */
 .fm-tier-2 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 0 14px;
-  height: 34px;
-  background: rgba(0, 0, 0, 0.25);
+  gap: 12px;
+  padding: 0 16px;
+  height: 38px;
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .fm-tactic-tabs {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
 
 .fm-tactic-tab {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 14px;
+  padding: 5px 14px;
   font-size: 12px;
   font-weight: 700;
-  color: #94a3b8;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .fm-tactic-tab:hover {
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .fm-tactic-tab.active {
   color: #ffffff;
-  background: #326295;
+  background: linear-gradient(135deg, #326295 0%, #1e4570 100%);
+  border-color: #407ab8;
   font-weight: 800;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 10px rgba(50, 98, 149, 0.4);
 }
 
 .fm-match-info-pill {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 2px 10px;
-  border-radius: 12px;
+  padding: 3px 12px;
+  border-radius: 8px;
 }
 
 .fm-info-vs {
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 900;
   color: #10b981;
   letter-spacing: 0.05em;
@@ -601,10 +679,10 @@ body,
   background: transparent;
   border: none;
   color: #ffffff;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
   outline: none;
-  width: 140px;
+  width: 150px;
 }
 
 .fm-rival-input::placeholder {
@@ -618,8 +696,8 @@ body,
   background: rgba(239, 68, 68, 0.12);
   border: 1px solid rgba(239, 68, 68, 0.3);
   color: #f87171;
-  padding: 2px 8px;
-  border-radius: 10px;
+  padding: 3px 8px;
+  border-radius: 6px;
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -2078,6 +2156,50 @@ body,
 
 /* ── Mobile Drawer & Compact Header (max-width: 900px) ─── */
 @media screen and (max-width: 900px) {
+  .fm-tier-1 {
+    height: auto;
+    min-height: 42px;
+    padding: 4px 8px;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .fm-tier-1::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fm-tier-2 {
+    height: auto;
+    min-height: 40px;
+    padding: 4px 8px;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .fm-tier-2::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fm-brand-title {
+    font-size: 11.5px;
+  }
+
+  .fm-match-selector-btn {
+    max-width: 200px;
+    font-size: 11.5px;
+    padding: 3px 8px;
+  }
+
+  .fm-match-dropdown-panel {
+    width: 300px;
+    max-width: calc(100vw - 20px);
+    left: 0;
+  }
+
+  .fm-sidebar-toggle-btn {
+    display: inline-flex;
+  }
+
   .btn-sidebar-toggle {
     display: inline-flex;
   }
@@ -2099,8 +2221,8 @@ body,
     top: 0;
     left: 0;
     bottom: 0;
-    width: 290px;
-    max-width: 85vw;
+    width: 310px;
+    max-width: 88vw;
     z-index: 100;
     transform: translateX(-100%);
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -2113,13 +2235,13 @@ body,
 
   .sidebar-close-btn {
     display: inline-flex;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.12);
     border: none;
     color: #ffffff;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     align-items: center;
     justify-content: center;

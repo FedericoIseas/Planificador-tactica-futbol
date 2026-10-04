@@ -79,6 +79,11 @@ export default function Sidebar({
             <span className="sidebar-title">📋 Plantilla</span>
             <span className="sidebar-count-badge">{squad.length} jug.</span>
           </div>
+          {onClose && (
+            <button className="sidebar-close-btn no-print" onClick={onClose} title="Cerrar menú">
+              ✕
+            </button>
+          )}
         </div>
 
         {onOpenCallUpModal && (

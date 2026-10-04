@@ -309,7 +309,7 @@ export default function Pitch({
                 <button
                   className="field-player-remove no-print"
                   onClick={(e) => { e.stopPropagation(); onPlayerRemove(player.id, tacticKey, subKey); }}
-                  onTouchEnd={(e) => { e.stopPropagation(); onPlayerRemove(player.id, tacticKey, subKey); }}
+                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); onPlayerRemove(player.id, tacticKey, subKey); }}
                   title="Quitar de la cancha"
                 >×</button>
               </div>

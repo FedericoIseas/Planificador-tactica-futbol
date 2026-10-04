@@ -57,10 +57,15 @@ A diferencia de las pizarras genéricas, esta aplicación combina:
   - *Campo Completo (200x280)* para planteos generales de Ataque y Defensa.
   - *Medio Campo Ofensivo (200x146)* para jugadas preparadas de Balón Parado.
 - **Intercambio Directo de Posiciones**: Al arrastrar una ficha táctica (o un suplente) justo sobre otro jugador en la cancha, las posiciones se intercambian automáticamente.
-- **Triple Sistema de Interacción**:
+- **Triple Sistema de Interacción Adaptativo**:
   1. **Drag & Drop de Escritorio (HTML5 Native DND)**: Arrastra jugadores desde la plantilla o el banco y suéltalos en cualquier sector.
   2. **Arrastre Táctil / Touch Gestures**: Mueve y reposiciona fichas de manera fluida en smartphones y tablets.
-  3. **Tap-to-Place (Tocar para ubicar)**: Toca directamente un jugador en la lista para ubicarlo al instante en el siguiente puesto táctico.
+  3. **Tap-to-Place Táctil Optimizado**: En dispositivos móviles, tocar un jugador de la plantilla lo selecciona para ubicarlo con una sola pulsación en la cancha.
+- **Experiencia Móvil Táctil de Primer Nivel**:
+  - Drawer desplegable de plantilla accesible mediante un botón exclusivo `📋 Plantilla` en el encabezado móvil con badge de citados.
+  - Cierre táctil por backdrop o botón `✕` superior.
+  - Botones de remoción de jugadores optimizados para dedos (`min-height: 44px` target area).
+  - Desplegable de fechas adaptativo con ancho dinámico (`max-width: calc(100vw - 20px)`) para prevenir overflow en teléfonos de pantalla reducida.
 - **Fichas Tácticas**: Pines circulares con el dorsal, brazalete de Capitán `(C)`, etiqueta con el nombre y botón de eliminación `(✕)` anclado fijamente al pin circular.
 
 ### 📅 Administrador de Fechas y Partidos
