@@ -1,19 +1,25 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
+import { FORMATIONS } from '../utils/formations.js';
 
 /**
  * Pitch — renders an SVG football pitch and acts as an interactive drop zone.
- * Supports mouse drag-and-drop, touch gestures for mobile/tablet, and tap-to-place.
+ * Supports mouse drag-and-drop, touch gestures for mobile/tablet, tap-to-place,
+ * tactical formation presets, clear pitch, and captain armband indicators.
  */
 export default function Pitch({
   players,
   onDrop,
   onPlayerMove,
   onPlayerRemove,
+  onApplyFormation,
+  onClearPitch,
   tacticKey,
   subKey = 'players',
   half = false,
   selectedPlayerId = null,
   onClearSelectedPlayer = null,
+  captainId = null,
+  formationKey = '4-3-3',
 }) {
   const pitchRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
@@ -50,8 +56,8 @@ export default function Pitch({
   // ── Tap-to-Place (Mobile & Desktop quick placement) ───────
   const handlePitchClick = useCallback((e) => {
     if (!selectedPlayerId || !onDrop || !pitchRef.current) return;
-    // Prevent if clicking on an existing player pin
-    if (e.target.closest('.field-player')) return;
+    // Prevent if clicking on an existing player pin remove button
+    if (e.target.closest('.field-player-remove')) return;
 
     const rect = pitchRef.current.getBoundingClientRect();
     const xPct = ((e.clientX - rect.left) / rect.width) * 100;
@@ -70,7 +76,7 @@ export default function Pitch({
     const rect = pitchRef.current.getBoundingClientRect();
     const offsetX = e.clientX - rect.left - (player.x / 100 * rect.width);
     const offsetY = e.clientY - rect.top - (player.y / 100 * rect.height);
-    setMovingPlayer({ id: player.id, offsetX, offsetY, isTouch: false });
+    setMovingPlayer({ id: player.id, startX: player.x, startY: player.y, offsetX, offsetY, isTouch: false });
     setGhostPos({ x: player.x, y: player.y, name: player.name });
   }, []);
 
@@ -82,7 +88,7 @@ export default function Pitch({
     const rect = pitchRef.current.getBoundingClientRect();
     const offsetX = touch.clientX - rect.left - (player.x / 100 * rect.width);
     const offsetY = touch.clientY - rect.top - (player.y / 100 * rect.height);
-    setMovingPlayer({ id: player.id, offsetX, offsetY, isTouch: true });
+    setMovingPlayer({ id: player.id, startX: player.x, startY: player.y, offsetX, offsetY, isTouch: true });
     setGhostPos({ x: player.x, y: player.y, name: player.name });
   }, []);
 
@@ -110,14 +116,14 @@ export default function Pitch({
       const yPct = ((e.clientY - rect.top - movingPlayer.offsetY) / rect.height) * 100;
       const cx = Math.max(3, Math.min(97, xPct));
       const cy = Math.max(3, Math.min(97, yPct));
-      onPlayerMove(movingPlayer.id, cx, cy, tacticKey, subKey);
+      onPlayerMove(movingPlayer.id, cx, cy, tacticKey, subKey, movingPlayer.startX, movingPlayer.startY);
       setMovingPlayer(null);
       setGhostPos(null);
     };
 
     const handleWindowTouchMove = (e) => {
       if (!pitchRef.current || !e.touches[0]) return;
-      if (e.cancelable) e.preventDefault(); // Prevent screen scroll while dragging player
+      if (e.cancelable) e.preventDefault();
       const touch = e.touches[0];
       const rect = pitchRef.current.getBoundingClientRect();
       const xPct = ((touch.clientX - rect.left - movingPlayer.offsetX) / rect.width) * 100;
@@ -140,7 +146,7 @@ export default function Pitch({
         const yPct = ((touch.clientY - rect.top - movingPlayer.offsetY) / rect.height) * 100;
         const cx = Math.max(3, Math.min(97, xPct));
         const cy = Math.max(3, Math.min(97, yPct));
-        onPlayerMove(movingPlayer.id, cx, cy, tacticKey, subKey);
+        onPlayerMove(movingPlayer.id, cx, cy, tacticKey, subKey, movingPlayer.startX, movingPlayer.startY);
       }
       setMovingPlayer(null);
       setGhostPos(null);
@@ -165,118 +171,157 @@ export default function Pitch({
   const svgViewBox = half ? '0 0 200 146' : '0 0 200 280';
 
   return (
-    <div
-      className={`pitch-wrapper${dragOver ? ' drop-active' : ''}${half ? ' pitch-half' : ''}${selectedPlayerId ? ' placement-mode' : ''}`}
-      ref={pitchRef}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      onClick={handlePitchClick}
-      style={{ userSelect: 'none' }}
-    >
-      {/* Pitch SVG Graphic */}
-      <svg
-        className="pitch-svg"
-        viewBox={svgViewBox}
-        preserveAspectRatio="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Grass background */}
-        <rect className="pitch-bg" width="200" height="280" fill="#12502f" />
-
-        {/* Alternating grass stripes */}
-        {Array.from({ length: 14 }).map((_, i) => (
-          <rect
-            key={i}
-            className="pitch-bg"
-            x="0"
-            y={i * 20}
-            width="200"
-            height="20"
-            fill={i % 2 === 0 ? '#155e37' : '#12502f'}
-          />
-        ))}
-
-        {/* Boundary Lines */}
-        {half ? (
-          <>
-            <line className="pitch-line" x1="6" y1="6" x2="6" y2="140" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" />
-            <line className="pitch-line" x1="6" y1="6" x2="194" y2="6" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" />
-            <line className="pitch-line" x1="194" y1="6" x2="194" y2="140" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" />
-            <line className="pitch-line" x1="6" y1="140" x2="194" y2="140" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" />
-            <path className="pitch-line" d="M 72 140 A 28 28 0 0 1 128 140" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
-          </>
-        ) : (
-          <>
-            <rect className="pitch-line" x="6" y="6" width="188" height="268" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" />
-            <line className="pitch-line" x1="6" y1="140" x2="194" y2="140" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
-            <circle className="pitch-line" cx="100" cy="140" r="28" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
-            <circle className="pitch-dot" cx="100" cy="140" r="2" fill="rgba(255,255,255,0.85)" />
-          </>
-        )}
-
-        {/* Penalty Area TOP */}
-        <rect className="pitch-line" x="42" y="6" width="116" height="44" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
-        <rect className="pitch-line" x="72" y="6" width="56" height="18" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
-        <rect className="pitch-line" x="84" y="2" width="32" height="6" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" />
-        <circle className="pitch-dot" cx="100" cy="38" r="1.5" fill="rgba(255,255,255,0.85)" />
-        <path className="pitch-line" d="M 82 50 A 22 22 0 0 0 118 50" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
-        <path className="pitch-line" d="M 6 16 A 10 10 0 0 0 16 6" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
-        <path className="pitch-line" d="M 184 6 A 10 10 0 0 0 194 16" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
-
-        {/* Bottom half — rendered only when full pitch */}
-        {!half && (
-          <>
-            <rect className="pitch-line" x="42" y="230" width="116" height="44" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
-            <rect className="pitch-line" x="72" y="256" width="56" height="18" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
-            <rect className="pitch-line" x="84" y="272" width="32" height="6" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" />
-            <circle className="pitch-dot" cx="100" cy="242" r="1.5" fill="rgba(255,255,255,0.85)" />
-            <path className="pitch-line" d="M 82 230 A 22 22 0 0 1 118 230" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
-            <path className="pitch-line" d="M 6 264 A 10 10 0 0 1 16 274" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
-            <path className="pitch-line" d="M 184 274 A 10 10 0 0 1 194 264" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
-          </>
-        )}
-      </svg>
-
-      {/* Touch / Placement Mode Helper banner (Screen only) */}
-      {selectedPlayerId && (
-        <div className="pitch-placement-indicator no-print">
-          <span>👆 Tocá la cancha para ubicar al jugador</span>
-          {onClearSelectedPlayer && (
-            <button className="pitch-placement-cancel" onClick={(e) => { e.stopPropagation(); onClearSelectedPlayer(); }}>✕</button>
+    <div className="pitch-container-outer">
+      {/* Tactical Formations Toolbar (Screen view, full pitch tactics) */}
+      {!half && (onApplyFormation || onClearPitch) && (
+        <div className="pitch-toolbar-header no-print">
+          <div className="pitch-formation-select-wrapper">
+            <span className="pitch-toolbar-label">📐 Formación:</span>
+            <select
+              className="pitch-formation-select"
+              value={formationKey}
+              onChange={(e) => onApplyFormation && onApplyFormation(e.target.value, tacticKey, subKey)}
+              title="Elegir esquema táctico"
+            >
+              {FORMATIONS.map(f => (
+                <option key={f.key} value={f.key}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {onClearPitch && (
+            <button
+              className="btn-clear-pitch"
+              onClick={() => onClearPitch(tacticKey, subKey)}
+              title="Quitar todos los jugadores de la pizarra en esta fase"
+            >
+              <span>🗑️</span>
+              <span className="btn-clear-pitch-text">Limpiar Pizarra</span>
+            </button>
           )}
         </div>
       )}
 
-      {/* Players on Field */}
-      {players.map((player) => {
-        const isMoving = movingPlayer && movingPlayer.id === player.id;
-        const displayX = isMoving ? ghostPos.x : player.x;
-        const displayY = isMoving ? ghostPos.y : player.y;
+      <div
+        className={`pitch-wrapper${dragOver ? ' drop-active' : ''}${half ? ' pitch-half' : ''}${selectedPlayerId ? ' placement-mode' : ''}`}
+        ref={pitchRef}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={handlePitchClick}
+        style={{ userSelect: 'none' }}
+      >
+        {/* Pitch SVG Graphic */}
+        <svg
+          className="pitch-svg"
+          viewBox={svgViewBox}
+          preserveAspectRatio="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {/* Grass background */}
+          <rect className="pitch-bg" width="200" height="280" fill="#12502f" />
 
-        return (
-          <div
-            key={player.id}
-            className={`field-player${isMoving ? ' is-dragging' : ''}`}
-            style={{ left: `${displayX}%`, top: `${displayY}%` }}
-            onMouseDown={(e) => handlePlayerMouseDown(e, player)}
-            onTouchStart={(e) => handlePlayerTouchStart(e, player)}
-          >
-            <div className="field-player-pin">
-              {player.number || '•'}
-            </div>
-            <div className="field-player-label">
-              {player.name}
-            </div>
-            <button
-              className="field-player-remove no-print"
-              onClick={(e) => { e.stopPropagation(); onPlayerRemove(player.id, tacticKey, subKey); }}
-              onTouchEnd={(e) => { e.stopPropagation(); onPlayerRemove(player.id, tacticKey, subKey); }}
-              title="Quitar de la cancha"
-            >×</button>
+          {/* Alternating grass stripes */}
+          {Array.from({ length: 14 }).map((_, i) => (
+            <rect
+              key={i}
+              className="pitch-bg"
+              x="0"
+              y={i * 20}
+              width="200"
+              height="20"
+              fill={i % 2 === 0 ? '#155e37' : '#12502f'}
+            />
+          ))}
+
+          {/* Boundary Lines */}
+          {half ? (
+            <>
+              <line className="pitch-line" x1="6" y1="6" x2="6" y2="140" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" />
+              <line className="pitch-line" x1="6" y1="6" x2="194" y2="6" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" />
+              <line className="pitch-line" x1="194" y1="6" x2="194" y2="140" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" />
+              <line className="pitch-line" x1="6" y1="140" x2="194" y2="140" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" />
+              <path className="pitch-line" d="M 72 140 A 28 28 0 0 1 128 140" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+            </>
+          ) : (
+            <>
+              <rect className="pitch-line" x="6" y="6" width="188" height="268" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" />
+              <line className="pitch-line" x1="6" y1="140" x2="194" y2="140" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+              <circle className="pitch-line" cx="100" cy="140" r="28" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+              <circle className="pitch-dot" cx="100" cy="140" r="2" fill="rgba(255,255,255,0.85)" />
+            </>
+          )}
+
+          {/* Penalty Area TOP */}
+          <rect className="pitch-line" x="42" y="6" width="116" height="44" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+          <rect className="pitch-line" x="72" y="6" width="56" height="18" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+          <rect className="pitch-line" x="84" y="2" width="32" height="6" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" />
+          <circle className="pitch-dot" cx="100" cy="38" r="1.5" fill="rgba(255,255,255,0.85)" />
+          <path className="pitch-line" d="M 82 50 A 22 22 0 0 0 118 50" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+          <path className="pitch-line" d="M 6 16 A 10 10 0 0 0 16 6" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+          <path className="pitch-line" d="M 184 6 A 10 10 0 0 0 194 16" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+
+          {/* Bottom half — rendered only when full pitch */}
+          {!half && (
+            <>
+              <rect className="pitch-line" x="42" y="230" width="116" height="44" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+              <rect className="pitch-line" x="72" y="256" width="56" height="18" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+              <rect className="pitch-line" x="84" y="272" width="32" height="6" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" />
+              <circle className="pitch-dot" cx="100" cy="242" r="1.5" fill="rgba(255,255,255,0.85)" />
+              <path className="pitch-line" d="M 82 230 A 22 22 0 0 1 118 230" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+              <path className="pitch-line" d="M 6 264 A 10 10 0 0 1 16 274" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+              <path className="pitch-line" d="M 184 274 A 10 10 0 0 1 194 264" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.2" />
+            </>
+          )}
+        </svg>
+
+        {/* Touch / Placement Mode Helper banner (Screen only) */}
+        {selectedPlayerId && (
+          <div className="pitch-placement-indicator no-print">
+            <span>👆 Tocá la cancha para ubicar al jugador</span>
+            {onClearSelectedPlayer && (
+              <button className="pitch-placement-cancel" onClick={(e) => { e.stopPropagation(); onClearSelectedPlayer(); }}>✕</button>
+            )}
           </div>
-        );
-      })}
+        )}
+
+        {/* Players on Field */}
+        {players.map((player) => {
+          const isMoving = movingPlayer && movingPlayer.id === player.id;
+          const displayX = isMoving ? ghostPos.x : player.x;
+          const displayY = isMoving ? ghostPos.y : player.y;
+          const isCaptain = player.id === captainId;
+
+          return (
+            <div
+              key={player.id}
+              className={`field-player${isMoving ? ' is-dragging' : ''}${isCaptain ? ' is-captain' : ''}`}
+              style={{ left: `${displayX}%`, top: `${displayY}%` }}
+              onMouseDown={(e) => handlePlayerMouseDown(e, player)}
+              onTouchStart={(e) => handlePlayerTouchStart(e, player)}
+            >
+              <div className="field-player-pin-wrapper">
+                <div className="field-player-pin">
+                  {player.number || '•'}
+                  {isCaptain && <span className="captain-badge" title="Capitán">C</span>}
+                </div>
+                <button
+                  className="field-player-remove no-print"
+                  onClick={(e) => { e.stopPropagation(); onPlayerRemove(player.id, tacticKey, subKey); }}
+                  onTouchEnd={(e) => { e.stopPropagation(); onPlayerRemove(player.id, tacticKey, subKey); }}
+                  title="Quitar de la cancha"
+                >×</button>
+              </div>
+              <div className="field-player-label">
+                {isCaptain && <span className="captain-label-c">(C) </span>}
+                {player.name}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
+

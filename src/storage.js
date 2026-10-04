@@ -16,13 +16,14 @@ export const DEFAULT_SQUAD = [
   { id: 'p11', name: 'LUCERO L', number: 11 },
 ];
 
-export const createMatch = (label = 'Nuevo partido') => ({
+export const createMatch = (label = 'Nuevo partido', initialCalledUpIds = null) => ({
   id: `match_${Date.now()}`,
   label,
   date: '',
   time: '',
   venue: '',
   rival: '',
+  calledUpIds: Array.isArray(initialCalledUpIds) ? initialCalledUpIds : DEFAULT_SQUAD.map(p => p.id),
   // Tactic tabs: ataque, defensa, and set pieces
   tactics: {
     ataque: { label: 'Ataque', players: [], observations: '' },
@@ -42,6 +43,8 @@ export const loadData = () => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw);
+    const squadList = Array.isArray(data.squad) ? data.squad : DEFAULT_SQUAD;
+
     if (data && Array.isArray(data.matches)) {
       data.matches = data.matches.map(m => {
         let tactics = { ...m.tactics };
@@ -81,7 +84,9 @@ export const loadData = () => {
           delete m.observations;
         }
 
-        return { ...m, tactics, setpieces };
+        const calledUpIds = Array.isArray(m.calledUpIds) ? m.calledUpIds : squadList.map(p => p.id);
+
+        return { ...m, calledUpIds, tactics, setpieces };
       });
     }
     return data;

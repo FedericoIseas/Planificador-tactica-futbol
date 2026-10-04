@@ -1,14 +1,22 @@
 import React, { useState } from 'react';
 import Pitch from './Pitch.jsx';
+import {
+  IconCalendar,
+  IconClock,
+  IconMapPin,
+  IconSword,
+  IconShield,
+  IconTarget,
+  IconFlag,
+  IconUserMinus,
+} from './Icons.jsx';
 
 const TACTIC_TABS = [
-  { key: 'ataque', label: 'Ataque', icon: '⚔️' },
-  { key: 'defensa', label: 'Defensa', icon: '🛡️' },
-  { key: 'tiros_libres', label: 'Tiros Libres', icon: '🎯' },
-  { key: 'corners', label: 'Corners', icon: '🚩' },
+  { key: 'ataque', label: 'Ataque', icon: <IconSword size={16} /> },
+  { key: 'defensa', label: 'Defensa', icon: <IconShield size={16} /> },
+  { key: 'tiros_libres', label: 'Tiros Libres', icon: <IconTarget size={16} /> },
+  { key: 'corners', label: 'Corners', icon: <IconFlag size={16} /> },
 ];
-
-
 
 const SETPIECES_ROWS = [
   { key: 'ejecutan', label: 'Ejecutan' },
@@ -17,18 +25,13 @@ const SETPIECES_ROWS = [
   { key: 'balance', label: 'Balance' },
 ];
 
-/** Formats YYYY-MM-DD → DD/MM/YYYY */
-function fmtDate(d) {
-  return d ? d.split('-').reverse().join('/') : '';
-}
-
 /** Header bar present at the top of every printed page & screen canvas */
-function MatchHeader({ match, onMatchChange, tacticLabel, onDeleteMatch, canDeleteMatch }) {
+function MatchHeader({ match, onMatchChange }) {
   const handleChange = (field, value) => onMatchChange({ ...match, [field]: value });
 
   return (
     <div className="match-header">
-      {/* Left Column: Editable Match Label, Opponent & Tactic Badge */}
+      {/* Left Column: Editable Match Label & Opponent */}
       <div className="match-header-left">
         <input
           className="match-header-title-input"
@@ -48,26 +51,15 @@ function MatchHeader({ match, onMatchChange, tacticLabel, onDeleteMatch, canDele
             onChange={e => handleChange('rival', e.target.value)}
           />
         </div>
-
-        <div className="match-header-badge-row">
-          {tacticLabel && (
-            <span className="tactic-pill-badge">
-              {tacticLabel}
-            </span>
-          )}
-          {fmtDate(match.date) && (
-            <span style={{ fontSize: 11.5, fontWeight: 700, color: '#64748b', letterSpacing: '0.04em' }}>
-              • {fmtDate(match.date)}
-            </span>
-          )}
-        </div>
       </div>
 
-      {/* Right Column: Key Match Details & Delete Action */}
+      {/* Right Column: Key Match Details */}
       <div className="match-header-right">
         <div className="match-header-fields">
           <div className="match-header-field">
-            <span className="match-header-label">📅 Fecha</span>
+            <span className="match-header-label">
+              <IconCalendar size={13} /> Fecha
+            </span>
             <input
               className="match-header-input"
               type="date"
@@ -76,7 +68,9 @@ function MatchHeader({ match, onMatchChange, tacticLabel, onDeleteMatch, canDele
             />
           </div>
           <div className="match-header-field">
-            <span className="match-header-label">⏰ Citación</span>
+            <span className="match-header-label">
+              <IconClock size={13} /> Citación
+            </span>
             <input
               className="match-header-input"
               type="time"
@@ -85,7 +79,9 @@ function MatchHeader({ match, onMatchChange, tacticLabel, onDeleteMatch, canDele
             />
           </div>
           <div className="match-header-field">
-            <span className="match-header-label">📍 Lugar</span>
+            <span className="match-header-label">
+              <IconMapPin size={13} /> Lugar
+            </span>
             <input
               className="match-header-input"
               type="text"
@@ -95,16 +91,6 @@ function MatchHeader({ match, onMatchChange, tacticLabel, onDeleteMatch, canDele
             />
           </div>
         </div>
-
-        {canDeleteMatch && onDeleteMatch && (
-          <button
-            className="btn-delete-match no-print"
-            onClick={() => onDeleteMatch(match.id)}
-            title="Eliminar esta fecha"
-          >
-            🗑️ Eliminar esta fecha
-          </button>
-        )}
       </div>
     </div>
   );
@@ -121,88 +107,151 @@ function TacticBody({
   onDrop,
   onPlayerMove,
   onPlayerRemove,
+  onApplyFormation,
+  onClearPitch,
+  onAutoPlacePlayer,
+  onToggleCallUp,
   selectedPlayerId,
-  onSelectPlayerForPlacement,
-  onClearSelectedPlayer
+  _onSelectPlayerForPlacement,
+  onClearSelectedPlayer,
+  captainId,
 }) {
-  const currentFieldIds = new Set(
-    (match.tactics[tacticKey]?.[subKey] || []).map(p => p.id)
-  );
-  const availableSquad = squad.filter(p => !currentFieldIds.has(p.id));
+  const calledUpIdsSet = new Set(match.calledUpIds || squad.map(p => p.id));
+  const mainStartersList = match.tactics.ataque?.players || match.tactics.defensa?.players || [];
+  const mainStartersSet = new Set(mainStartersList.map(p => p.id));
 
-  const setpieceDataKey = subKey !== 'players' ? `${tacticKey}_${subKey.replace('players_', '')}` : tacticKey;
-  const obsKey = subKey !== 'players' ? `${subKey}_obs` : 'observations';
+  // In set pieces (tiros libres & corners), ONLY 11 titulares from Ataque/Defensa are eligible
+  const calledUpSquad = isExtra
+    ? squad.filter(p => mainStartersSet.has(p.id))
+    : squad.filter(p => calledUpIdsSet.has(p.id));
+
+  const currentFieldPlayers = match.tactics[tacticKey]?.[subKey]
+    || (subKey === 'players_ataque' ? (match.tactics[tacticKey]?.players_izq || match.tactics[tacticKey]?.players || []) : [])
+    || (subKey === 'players_defensa' ? (match.tactics[tacticKey]?.players_der || []) : []);
+  const currentFieldIds = new Set(currentFieldPlayers.map(p => p.id));
+
+  const availableSquad = calledUpSquad.filter(p => !currentFieldIds.has(p.id));
+
+  const isFullField = tacticKey === 'ataque' || tacticKey === 'defensa';
+  const startersCount = currentFieldPlayers.length;
+  const is11Complete = isFullField && startersCount >= 11;
+
+  const currentFormationKey = match.tactics[tacticKey]?.formation || '4-3-3';
+
+  const subTag = subKey !== 'players' ? subKey.replace('players_', '') : 'players';
+  const setpieceDataKey = subKey !== 'players' ? `${tacticKey}_${subTag}` : tacticKey;
+  const oldSetpieceKey = subTag === 'ataque' ? `${tacticKey}_izq` : (subTag === 'defensa' ? `${tacticKey}_der` : tacticKey);
+  const setpieceData = match.setpieces?.[setpieceDataKey] || match.setpieces?.[oldSetpieceKey] || match.setpieces?.[tacticKey] || {};
+
+  const obsKey = subKey !== 'players' ? `observations_${subTag}` : 'observations';
+  const oldObsKey = subTag === 'ataque' ? 'observations_izq' : (subTag === 'defensa' ? 'observations_der' : 'observations');
+  const obsValue = match.tactics[tacticKey]?.[obsKey] !== undefined
+    ? match.tactics[tacticKey]?.[obsKey]
+    : (match.tactics[tacticKey]?.[oldObsKey] !== undefined
+        ? match.tactics[tacticKey]?.[oldObsKey]
+        : (match.tactics[tacticKey]?.observations || ''));
 
   const handleSetpieceChange = (category, field, value) => {
     onMatchChange({
       ...match,
       setpieces: {
         ...match.setpieces,
-        [category]: { ...match.setpieces[category], [field]: value }
+        [category]: { ...match.setpieces?.[category], [field]: value }
       },
     });
   };
 
   const handleSquadItemClick = (playerId) => {
-    if (!onSelectPlayerForPlacement) return;
-    if (selectedPlayerId === playerId) {
-      onSelectPlayerForPlacement(null);
-    } else {
-      onSelectPlayerForPlacement(playerId);
+    if (is11Complete && isFullField) return;
+    if (onAutoPlacePlayer) {
+      onAutoPlacePlayer(playerId, tacticKey, subKey);
     }
   };
 
   return (
-    <div className="tactic-body">
+    <div className={`tactic-body${isExtra ? ' is-setpiece-body' : ''}`}>
+      {/* Column 1: Tactical Pitch */}
       <Pitch
         tacticKey={tacticKey}
-        players={match.tactics[tacticKey]?.[subKey] || []}
+        players={currentFieldPlayers}
         onDrop={onDrop}
         onPlayerMove={onPlayerMove}
         onPlayerRemove={onPlayerRemove}
+        onApplyFormation={onApplyFormation}
+        onClearPitch={onClearPitch}
         subKey={subKey}
         half={isExtra}
         selectedPlayerId={selectedPlayerId}
         onClearSelectedPlayer={onClearSelectedPlayer}
+        captainId={captainId}
+        formationKey={currentFormationKey}
       />
 
-      {/* Available Squad List (Screen view only) */}
+      {/* Column 2: Plantel Convocado / Banco de Suplentes List (Screen view only) */}
       <div className="onboard-squad no-print">
         <div className="onboard-squad-title">
-          <span>Plantel Disponible</span>
-          <span style={{ fontSize: 10.5, background: '#326295', color: '#ffffff', padding: '1px 7px', borderRadius: 10, fontWeight: 800 }}>{availableSquad.length}</span>
+          <span>{isExtra ? 'Titulares Disponibles' : (is11Complete ? 'Banco de Suplentes' : 'Plantel Convocado')}</span>
+          <span className={`onboard-squad-badge${is11Complete ? ' is-suplentes' : ''}`}>
+            {isExtra
+              ? `${currentFieldPlayers.length}/${mainStartersSet.size || 11}`
+              : (is11Complete ? `${availableSquad.length} suplentes` : `Titulares: ${startersCount}/11`)}
+          </span>
         </div>
+
         <div className="onboard-squad-list">
           {availableSquad.map(p => {
-            const isSelected = selectedPlayerId === p.id;
+            const isCaptain = p.id === captainId;
             return (
               <div
                 key={p.id}
-                className={`onboard-squad-item${isSelected ? ' is-selected' : ''}`}
-                draggable
+                className={`onboard-squad-item${is11Complete ? ' is-suplente-item' : ''}`}
+                draggable={!is11Complete}
                 onDragStart={(e) => {
+                  if (is11Complete && !isExtra) return;
                   e.dataTransfer.effectAllowed = 'copy';
                   e.dataTransfer.setData('playerId', p.id);
                   e.dataTransfer.setData('playerName', p.name);
                 }}
                 onClick={() => handleSquadItemClick(p.id)}
-                title={isSelected ? 'Seleccionado: tocá la cancha para ubicarlo' : 'Arrastrá o tocá para ubicar en cancha'}
+                title={
+                  is11Complete && !isExtra
+                    ? 'Suplente: quitá un jugador de la cancha para ubicarlo'
+                    : 'Tocar para ubicar en cancha'
+                }
               >
                 <span className="onboard-squad-num">{p.number || '•'}</span>
-                <span className="onboard-squad-name">{p.name}</span>
-                {isSelected && <span className="onboard-squad-check">✓</span>}
+                <span className="onboard-squad-name">
+                  {p.name}
+                  {isCaptain && <span className="captain-tag"> (C)</span>}
+                </span>
+                {onToggleCallUp && (
+                  <button
+                    className="btn-uncallup-icon no-print"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleCallUp(p.id);
+                    }}
+                    title="Quitar de la citación para este partido"
+                  >
+                    <IconUserMinus size={13} />
+                  </button>
+                )}
               </div>
             );
           })}
           {availableSquad.length === 0 && (
             <div className="onboard-squad-empty">
-              Todos ubicados en cancha
+              {isExtra
+                ? (mainStartersSet.size === 0
+                    ? 'Ubicá los 11 titulares en Ataque'
+                    : 'Todos los titulares ubicados')
+                : (is11Complete ? 'Sin suplentes convocados' : 'Todos ubicados')}
             </div>
           )}
         </div>
       </div>
 
-      {/* Set Pieces & Observations Section */}
+      {/* Column 3: Set Pieces, Observaciones (Tall & Prominent) & Printed Suplentes Block */}
       <div className="tactic-forms-column">
         {/* SET PIECES (Only rendered if it's a set piece page) */}
         {isExtra && (
@@ -211,31 +260,58 @@ function TacticBody({
               <div className="setpieces-title">{tacticLabel}</div>
             </div>
             <SetpiecesCategory
-              data={match.setpieces[setpieceDataKey]}
+              data={setpieceData}
               onChange={(f, v) => handleSetpieceChange(setpieceDataKey, f, v)}
             />
           </div>
         )}
 
-        {/* OBSERVATIONS */}
-        <div className="observations-block">
+        {/* OBSERVATIONS (ALWAYS VISIBLE & PROMINENT) */}
+        <div className={`observations-block${!isExtra ? ' is-expanded' : ''}`}>
           <div className="observations-title">Observaciones / Indicaciones</div>
           <textarea
             className="observations-content"
-            value={match.tactics[tacticKey]?.[obsKey] || match.tactics[tacticKey]?.observations || ''}
-            onChange={e => onMatchChange({
-              ...match,
-              tactics: {
-                ...match.tactics,
-                [tacticKey]: {
-                  ...match.tactics[tacticKey],
-                  [obsKey]: e.target.value
-                }
-              }
-            })}
+            value={obsValue}
+            onChange={e => {
+              const val = e.target.value;
+              onMatchChange({
+                ...match,
+                tactics: {
+                  ...match.tactics,
+                  [tacticKey]: {
+                    ...match.tactics[tacticKey],
+                    [obsKey]: val,
+                  },
+                },
+              });
+            }}
             placeholder="Escribí notas tácticas, marcas específicas, cambios programados…"
           />
         </div>
+
+        {/* SUPLENTES / CONVOCADOS PRINTED BLOCK (Full pitch tactics only) */}
+        {!isExtra && (
+          <div className="suplentes-block">
+            <div className="suplentes-title">
+              <span>📋 SUPLENTES / CONVOCADOS</span>
+              <span className="suplentes-badge-pill">{availableSquad.length} suplentes</span>
+            </div>
+            <div className="suplentes-list-inline">
+              {availableSquad.map(p => (
+                <span key={p.id} className="suplente-chip">
+                  <span className="suplente-chip-num">{p.number ? `Nº ${p.number}` : '•'}</span>
+                  <span className="suplente-chip-name">
+                    {p.name}
+                    {p.id === captainId && <span className="captain-tag"> (C)</span>}
+                  </span>
+                </span>
+              ))}
+              {availableSquad.length === 0 && (
+                <span className="suplentes-empty-text">Sin suplentes / Todos en cancha</span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -252,12 +328,15 @@ function PrintPage({
   onDrop,
   onPlayerMove,
   onPlayerRemove,
-  onDeleteMatch,
-  canDeleteMatch,
+  onApplyFormation,
+  onClearPitch,
+  onAutoPlacePlayer,
+  onToggleCallUp = null,
   isLast,
   selectedPlayerId = null,
   onSelectPlayerForPlacement = null,
   onClearSelectedPlayer = null,
+  captainId = null,
 }) {
   return (
     <div className={`printable-board print-page${isLast ? ' last-page' : ''}`}>
@@ -265,30 +344,72 @@ function PrintPage({
       <MatchHeader
         match={match}
         onMatchChange={onMatchChange}
-        tacticLabel={singleSubKey ? tacticLabel : (isExtra ? `${tacticLabel}` : tacticLabel)}
-        onDeleteMatch={onDeleteMatch}
-        canDeleteMatch={canDeleteMatch}
       />
 
-      {isExtra && !singleSubKey ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, minHeight: 0 }}>
+      {isExtra ? (
+        <div className="setpieces-stacked-container">
           <TacticBody
-            match={match} squad={squad} tacticKey={tacticKey} subKey="players_izq" tacticLabel={`${tacticLabel} (Izquierda)`}
-            isExtra={true} onMatchChange={onMatchChange} onDrop={onDrop} onPlayerMove={onPlayerMove} onPlayerRemove={onPlayerRemove}
-            selectedPlayerId={selectedPlayerId} onSelectPlayerForPlacement={onSelectPlayerForPlacement} onClearSelectedPlayer={onClearSelectedPlayer}
+            match={match}
+            squad={squad}
+            tacticKey={tacticKey}
+            subKey="players_ataque"
+            tacticLabel={`${tacticLabel} (ATAQUE)`}
+            isExtra={true}
+            onMatchChange={onMatchChange}
+            onDrop={onDrop}
+            onPlayerMove={onPlayerMove}
+            onPlayerRemove={onPlayerRemove}
+            onApplyFormation={onApplyFormation}
+            onClearPitch={onClearPitch}
+            onAutoPlacePlayer={onAutoPlacePlayer}
+            onToggleCallUp={onToggleCallUp}
+            selectedPlayerId={selectedPlayerId}
+            onSelectPlayerForPlacement={onSelectPlayerForPlacement}
+            onClearSelectedPlayer={onClearSelectedPlayer}
+            captainId={captainId}
           />
-          <hr className="no-print" style={{ border: 'none', borderTop: '3px dashed #e2e8f0', margin: '0 20px' }} />
+          <div className="setpieces-dotted-divider" />
           <TacticBody
-            match={match} squad={squad} tacticKey={tacticKey} subKey="players_der" tacticLabel={`${tacticLabel} (Derecha)`}
-            isExtra={true} onMatchChange={onMatchChange} onDrop={onDrop} onPlayerMove={onPlayerMove} onPlayerRemove={onPlayerRemove}
-            selectedPlayerId={selectedPlayerId} onSelectPlayerForPlacement={onSelectPlayerForPlacement} onClearSelectedPlayer={onClearSelectedPlayer}
+            match={match}
+            squad={squad}
+            tacticKey={tacticKey}
+            subKey="players_defensa"
+            tacticLabel={`${tacticLabel} (DEFENSA)`}
+            isExtra={true}
+            onMatchChange={onMatchChange}
+            onDrop={onDrop}
+            onPlayerMove={onPlayerMove}
+            onPlayerRemove={onPlayerRemove}
+            onApplyFormation={onApplyFormation}
+            onClearPitch={onClearPitch}
+            onAutoPlacePlayer={onAutoPlacePlayer}
+            onToggleCallUp={onToggleCallUp}
+            selectedPlayerId={selectedPlayerId}
+            onSelectPlayerForPlacement={onSelectPlayerForPlacement}
+            onClearSelectedPlayer={onClearSelectedPlayer}
+            captainId={captainId}
           />
         </div>
       ) : (
         <TacticBody
-          match={match} squad={squad} tacticKey={tacticKey} subKey={singleSubKey || 'players'} tacticLabel={tacticLabel}
-          isExtra={isExtra} onMatchChange={onMatchChange} onDrop={onDrop} onPlayerMove={onPlayerMove} onPlayerRemove={onPlayerRemove}
-          selectedPlayerId={selectedPlayerId} onSelectPlayerForPlacement={onSelectPlayerForPlacement} onClearSelectedPlayer={onClearSelectedPlayer}
+          match={match}
+          squad={squad}
+          tacticKey={tacticKey}
+          subKey={singleSubKey || 'players'}
+          tacticLabel={tacticLabel}
+          isExtra={isExtra}
+          onMatchChange={onMatchChange}
+          onDrop={onDrop}
+          onPlayerMove={onPlayerMove}
+          onPlayerRemove={onPlayerRemove}
+          onApplyFormation={onApplyFormation}
+          onClearPitch={onClearPitch}
+          onAutoPlacePlayer={onAutoPlacePlayer}
+          onToggleCallUp={onToggleCallUp}
+          selectedPlayerId={selectedPlayerId}
+          onSelectPlayerForPlacement={onSelectPlayerForPlacement}
+          onClearSelectedPlayer={onClearSelectedPlayer}
+          captainId={captainId}
         />
       )}
     </div>
@@ -320,7 +441,7 @@ function SetpiecesCategory({ label, data, onChange }) {
               value={data?.[row.key] || ''}
               onChange={e => onChange(row.key, e.target.value)}
               placeholder="Jugadores…"
-              rows={2}
+              rows={1}
             />
           </div>
         ))}
@@ -338,38 +459,45 @@ export default function PrintableBoard({
   onDrop,
   onPlayerMove,
   onPlayerRemove,
+  onApplyFormation,
+  onClearPitch,
+  onAutoPlacePlayer = null,
+  onToggleCallUp = null,
   onDeleteMatch,
   canDeleteMatch,
   printSections,
   selectedPlayerId = null,
   onSelectPlayerForPlacement = null,
   onClearSelectedPlayer = null,
+  onOpenCallUpModal = null,
+  captainId = null,
 }) {
   const [internalTactic, setInternalTactic] = useState('ataque');
   const currentTactic = onTacticChange ? activeTactic : internalTactic;
   const setTactic = onTacticChange || setInternalTactic;
   const activeTab = TACTIC_TABS.find(t => t.key === currentTactic);
-  // Filter for print — default to all if not provided
   const sectionsToprint = printSections || { ataque: true, defensa: true, tiros_libres: true, corners: true };
   const printTabs = TACTIC_TABS.filter(t => sectionsToprint[t.key]);
 
   return (
     <>
-      {/* ── SCREEN: Tactic Tab Selector ── */}
-      <div className="tactic-tabs-bar no-print">
-        <div className="tactic-tabs-container">
-          {TACTIC_TABS.map(t => (
-            <button
-              key={t.key}
-              className={`tactic-tab-btn${currentTactic === t.key ? ' active' : ''}`}
-              onClick={() => setTactic(t.key)}
-            >
-              <span>{t.icon}</span>
-              <span>{t.label}</span>
-            </button>
-          ))}
+      {/* ── SCREEN: Tactic Tab Selector (Rendered if not provided by header) ── */}
+      {!onTacticChange && (
+        <div className="tactic-tabs-bar no-print">
+          <div className="tactic-tabs-container">
+            {TACTIC_TABS.map(t => (
+              <button
+                key={t.key}
+                className={`tactic-tab-btn${currentTactic === t.key ? ' active' : ''}`}
+                onClick={() => setTactic(t.key)}
+              >
+                <span>{t.icon}</span>
+                <span>{t.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── SCREEN VIEW: Current active sheet ── */}
       <div className="board-scroll no-print">
@@ -383,12 +511,18 @@ export default function PrintableBoard({
           onDrop={onDrop}
           onPlayerMove={onPlayerMove}
           onPlayerRemove={onPlayerRemove}
+          onApplyFormation={onApplyFormation}
+          onClearPitch={onClearPitch}
+          onAutoPlacePlayer={onAutoPlacePlayer}
+          onToggleCallUp={onToggleCallUp}
           onDeleteMatch={onDeleteMatch}
           canDeleteMatch={canDeleteMatch}
           isLast={false}
           selectedPlayerId={selectedPlayerId}
           onSelectPlayerForPlacement={onSelectPlayerForPlacement}
           onClearSelectedPlayer={onClearSelectedPlayer}
+          onOpenCallUpModal={onOpenCallUpModal}
+          captainId={captainId}
         />
       </div>
 
@@ -396,7 +530,7 @@ export default function PrintableBoard({
       <div className="print-pages-container" style={{ display: 'none' }}>
         {printTabs.map((t, i) => {
           const isExtra = t.key !== 'ataque' && t.key !== 'defensa';
-          
+
           return (
             <PrintPage
               key={t.key}
@@ -410,9 +544,13 @@ export default function PrintableBoard({
               onDrop={onDrop}
               onPlayerMove={onPlayerMove}
               onPlayerRemove={onPlayerRemove}
+              onApplyFormation={onApplyFormation}
+              onClearPitch={onClearPitch}
               onDeleteMatch={onDeleteMatch}
               canDeleteMatch={canDeleteMatch}
               isLast={i === printTabs.length - 1}
+              onOpenCallUpModal={onOpenCallUpModal}
+              captainId={captainId}
             />
           );
         })}
@@ -420,3 +558,4 @@ export default function PrintableBoard({
     </>
   );
 }
+
