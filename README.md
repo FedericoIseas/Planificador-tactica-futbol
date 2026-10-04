@@ -137,6 +137,9 @@ La aplicación incluye un sistema de exportación profesional e impresión calib
 
 ```text
 Planificador-tactica-futbol/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml       # Workflow de GitHub Actions para despliegue automático desde main
 ├── public/
 │   ├── favicon.svg          # Favicon vectorial de la aplicación
 │   └── icons.svg            # Conjunto de iconos SVG
@@ -203,12 +206,22 @@ npm run build
 
 ## 🚀 Despliegue
 
-El proyecto está configurado para compilarse y publicarse automáticamente en **GitHub Pages**:
+El proyecto está configurado para desplegarse en **GitHub Pages** de dos formas:
+
+### Opción A: Despliegue automático desde `main` con GitHub Actions (Recomendado)
+El proyecto incluye un workflow en `.github/workflows/deploy.yml` que compila y despliega la aplicación automáticamente cada vez que se sube un cambio a `main`.
+
+Para activarlo:
+1. En GitHub, ve a **Settings** -> **Pages**.
+2. En la sección **Source**, selecciona **GitHub Actions**.
+
+### Opción B: Despliegue manual vía `gh-pages`
+Si la fuente en GitHub Pages está configurada en la rama `gh-pages`:
 
 ```bash
 npm run deploy
 ```
-Este comando ejecutará `predeploy` (`npm run build`) y subirá la carpeta `dist` a la rama `gh-pages`.
+Este comando ejecutará `predeploy` (`npm run build`) y publicará los archivos compilados en la rama `gh-pages`.
 
 ---
 
