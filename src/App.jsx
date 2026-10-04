@@ -6,7 +6,7 @@ import ConfirmModal from './components/ConfirmModal.jsx';
 import Toast from './components/Toast.jsx';
 import { DEFAULT_SQUAD, createMatch, loadData, saveData } from './storage.js';
 import { generateTacticalPdf } from './utils/pdfGenerator.js';
-import { FORMATIONS, applyFormationToPlayers } from './utils/formations.js';
+import { FORMATIONS, SETPIECE_POSITIONS, applyFormationToPlayers } from './utils/formations.js';
 import {
   IconPrinter,
   IconPdf,
@@ -640,14 +640,22 @@ export default function App() {
       return;
     }
 
-    const currentFormationKey = activeMatch.tactics[tacticKey]?.formation || '4-3-3';
-    const formation = FORMATIONS.find(f => f.key === currentFormationKey) || FORMATIONS[0];
+    let positionsList = [];
+    if (tacticKey === 'tiros_libres' || tacticKey === 'corners') {
+      const subTag = subKey !== 'players' ? subKey.replace('players_', '') : 'ataque';
+      const presetKey = `${tacticKey}_${subTag}`;
+      positionsList = SETPIECE_POSITIONS[presetKey] || SETPIECE_POSITIONS.tiros_libres_ataque;
+    } else {
+      const currentFormationKey = activeMatch.tactics[tacticKey]?.formation || '4-3-3';
+      const formation = FORMATIONS.find(f => f.key === currentFormationKey) || FORMATIONS[0];
+      positionsList = formation.positions;
+    }
 
-    // Find the first position in selected formation that is free
+    // Find the first position in selected formation or setpiece preset that is free
     let freePos = null;
-    for (let i = 0; i < formation.positions.length; i++) {
-      const candidate = formation.positions[i];
-      const isOccupied = currentPlayers.some(p => Math.hypot(p.x - candidate.x, p.y - candidate.y) < 5);
+    for (let i = 0; i < positionsList.length; i++) {
+      const candidate = positionsList[i];
+      const isOccupied = currentPlayers.some(p => Math.hypot(p.x - candidate.x, p.y - candidate.y) < 6);
       if (!isOccupied) {
         freePos = candidate;
         break;
@@ -655,7 +663,7 @@ export default function App() {
     }
 
     if (!freePos) {
-      freePos = formation.positions[currentPlayers.length] || { x: 50, y: 50 };
+      freePos = positionsList[currentPlayers.length] || { x: 50, y: 50 };
     }
 
     const newPlacedPlayer = { ...playerObj, x: freePos.x, y: freePos.y };

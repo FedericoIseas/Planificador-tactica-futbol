@@ -1496,6 +1496,30 @@ body,
   letter-spacing: 0.01em;
 }
 
+/* ── Half-Pitch Player Pin Scaling & Hover Boost ─────────── */
+.pitch-half .field-player-pin {
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+  border-width: 1.5px;
+}
+
+.pitch-half .field-player-label {
+  font-size: 9.5px;
+  padding: 1px 5px;
+  max-width: 30mm;
+}
+
+.pitch-half .field-player:hover {
+  z-index: 100;
+  transform: translate(-50%, -50%) scale(1.18);
+}
+
+.pitch-half .field-player:hover .field-player-label {
+  border-color: #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.7);
+}
+
 .field-player-pin-wrapper {
   position: relative;
   display: flex;
